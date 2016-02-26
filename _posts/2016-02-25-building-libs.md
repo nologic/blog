@@ -12,11 +12,12 @@ Once you have jailbroken your pristine iOS 8 or 9 or whatever phone, you probabl
 Time for some background information. If you jailbreak your iOS device with one of the standard jailbreaking tools, by that I mean TaiG or Pangu jailbreaks, then you will get a whole bunch of infrastructure to go along with it. One of the pieces of that infrastructure will be Cydia and CydiaSubstrate (a.k.a substrate or mobile substrate). Both of those are implemented by Jay Freeman (saurik). Cydia is the jailbreaker's appstore. It's great for getting stuff like GDB and other binary development tools.
 
 Substrate is assisted by a kernel patch. It lets the user load dynamic libraries from this directory.
-{% highlight bash %}
-  /Library/MobileSubstrate/DynamicLibraries/
-{% endhighlight %}
 
-Once the app is loaded into memory all the libraries from that directory will loaded as well. It is very similar to the use of DYLD_INSERT_LIBRARIES from the command line. The only difference is that function interposition won't work. In order to interpose, you would need to use Substrate's MSHookFunction subroutine. This is how tweaks will modify Apps' functionality. NOTE: At this point you have forgone all security and no data, except for the data in the Security Enclave, will be safe. You decide how you want to handle this risk.
+```bash
+  /Library/MobileSubstrate/DynamicLibraries/
+```
+
+Once the app is loaded into memory all the libraries from that directory will loaded as well. It is very similar to the use of `DYLD_INSERT_LIBRARIES` from the command line. The only difference is that function interposition won't work. In order to interpose, you would need to use Substrate's MSHookFunction subroutine. This is how tweaks will modify Apps' functionality. NOTE: At this point you have forgone all security and no data, except for the data in the Security Enclave, will be safe. You decide how you want to handle this risk.
 
 ## Basics
 In order to build one of those libraries, you will need an OS X instance with Xcode command line tools installed. You could probably do this on something other than OS X, but that would just be torture. Once you've committed to development on the iPhone, might as well go all the way.
@@ -29,27 +30,33 @@ First, you will need to find the appropriate SDK. Xcode has several, one for eac
 ```
 
 The easiest way to find those is to execute the xcrun command:
-~~~ bash
+
+```bash
   $ xcrun --sdk iphoneos --show-sdk-path
   /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS9.2.sdk
-~~~
+```
+
 We might need this for later. For example, for locating platform specific libraries and frameworks. Next we will want to find the appropriate compiler:
-~~~ bash
+
+```bash
   $ xcrun --sdk iphoneos --find gcc
   /Applications/Xcode.app/Contents/Developer/usr/bin/gcc
   
   $ xcrun --sdk iphoneos --find clang
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
-~~~
+```
+
 You can use xcrun to find all kinds of binary tools for the target platform. What's nice about the xcrun tool is that we can write portable make files, portable within the Mac ecosystem that is. Your compilation step might look something like this:
-~~~ bash
+
+```bash
 $ `xcrun --sdk iphoneos --find clang` -Os  -isysroot `xcrun --sdk iphoneos --show-sdk-path` -F`xcrun --sdk iphoneos --show-sdk-path`/System/Library/Frameworks  -arch armv7 -arch armv7s -arch arm64 -shared -o main.dylib main.c
-~~~
+```
 
 Here, we are basically choosing a compiler and the cross compilation platform. Then we are using clang to compile main.c for the iphoneos platform. This will output a FAT MACH-O file containing versions for armv7/7s (32bit ARM - iPhone 5c and the line) and ARM64 (64bit ARM - iPhone 5s and the like). This is great if you want to be able to support all app bitness. Because we added the -shared flag which is synonymous with -dynamic, the compiler will output a dylib.
 
 The final step is to give your dylib some entitlements so that it can do its business unhindered. This is done using the ldid command that can be obtained from source. The entitlements file is an XML plist with the list of entitlement you wish to have on the command line program or the dylib:
-~~~ xml
+
+```xml
    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
    <plist version="1.0">
    <dict>
@@ -65,10 +72,11 @@ The final step is to give your dylib some entitlements so that it can do its bus
      <true/>
    </dict>
    </plist>
-~~~
+```
   
 This file is to be supplied using the -S flag on the ldid command. So in the end your Makefile might look something like this:
-~~~ bash
+
+```bash
    GCC_BIN=`xcrun --sdk iphoneos --find clang`
    GCC=$(GCC_BASE) -arch armv7 -arch armv7s -arch arm64
    SDK=`xcrun --sdk iphoneos --show-sdk-path`
@@ -78,9 +86,7 @@ This file is to be supplied using the -S flag on the ldid command. So in the end
    main: main.c
     $(GCC) -o $@ $^
     ldid -Sent.xml $@
-~~~
-
-_Simples!_
+```
 
 ## Using Theos
 
@@ -92,36 +98,42 @@ First, install Theos by following the steps on the iphonewiki (section: On Mac O
 * make sure there is a link (named theos) to or the actual files to theos in your project directory
 
 I've skipped a few steps but the directions on the site are very clear. Then create a make file that defines a whole bunch of variables:
-~~~ make
+
+```make
 LIBRARY_NAME = libmain
-~~~
+```
+
 This will be used by theos to derive other variable names:
-~~~ bash
+
+```bash
 libmain_FILES = main.m
 libmain_LIBRARIES = substrate
 libmain_FRAMEWORKS = UIKit 
-~~~
+```
+
 Theos will need to know which files to compile and which libraries/frameworks you require. Then you need specify how you want your binaries built - architecture, compiler, target platform, etc:
-~~~ make
+
+```make
 export TARGET = iphone:clang
 export ARCHS = arm64 armv7s
 export TARGET_IPHONEOS_DEPLOYMENT_VERSION = 3.0
 export TARGET_IPHONEOS_DEPLOYMENT_VERSION_armv7s = 6.0
 export TARGET_IPHONEOS_DEPLOYMENT_VERSION_arm64 = 7.0
-~~~
+```
 This says that I want to build for ARM64 using clang and target it for the 7.0 version of the platform. Also, I want a 32bit ARMV7s for iOS 6.0. Those will be built and placed into the same FAT MACH-O. Finally, we need to tell theos what type of project this is:
-~~~ make
+
+```make
 include theos/makefiles/common.mk
 include $(THEOS_MAKE_PATH)/library.mk
-~~~
+```
+
 Since we only want the dylib, we tell it that we are making a library. Then theos will go off and build us a dylib. It will place the output into ./obj/libmain.dylib at which point we are free to upload it into the substrate directory for loading. The output will look something like this:
-~~~ bash
+
+```bash
 $ file obj/libmain.dylib
 obj/libmain.dylib: Mach-O universal binary with 3 architectures
 obj/libmain.dylib (for architecture armv7): Mach-O dynamically linked shared library arm
 obj/libmain.dylib (for architecture armv7s): Mach-O dynamically linked shared library arm
 obj/libmain.dylib (for architecture arm64): Mach-O 64-bit dynamically linked shared library
-~~~
+```
 Once the library is loaded by CydiaSubstrate, the system will run the library constructor like normal and you're free to do whatever you want to the unsuspecting app.
-
-_Simples!_
