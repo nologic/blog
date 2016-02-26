@@ -49,7 +49,9 @@ We might need this for later. For example, for locating platform specific librar
 You can use xcrun to find all kinds of binary tools for the target platform. What's nice about the xcrun tool is that we can write portable make files, portable within the Mac ecosystem that is. Your compilation step might look something like this:
 
 ```bash
-$ `xcrun --sdk iphoneos --find clang` -Os  -isysroot `xcrun --sdk iphoneos --show-sdk-path` -F`xcrun --sdk iphoneos --show-sdk-path`/System/Library/Frameworks  -arch armv7 -arch armv7s -arch arm64 -shared -o main.dylib main.c
+$ `xcrun --sdk iphoneos --find clang` -Os  -isysroot `xcrun --sdk iphoneos \
+  --show-sdk-path` -F`xcrun --sdk iphoneos --show-sdk-path`/System/Library/Frameworks \
+  -arch armv7 -arch armv7s -arch arm64 -shared -o main.dylib main.c
 ```
 
 Here, we are basically choosing a compiler and the cross compilation platform. Then we are using clang to compile main.c for the iphoneos platform. This will output a FAT MACH-O file containing versions for armv7/7s (32bit ARM - iPhone 5c and the line) and ARM64 (64bit ARM - iPhone 5s and the like). This is great if you want to be able to support all app bitness. Because we added the -shared flag which is synonymous with -dynamic, the compiler will output a dylib.
