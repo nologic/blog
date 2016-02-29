@@ -59,8 +59,11 @@ Now that we've seen how Objective-C makes method calls, we notice that `objc_msg
 
 So, what we are going to do is hook the `objc_msgSend` function on an ARM64 iOS Objective-C program. This will allow us to specify a function to get called before `objc_msgSend` is actually executed. We will do this on a Jailbroken iPhone - so no security mechanism bypasses here, the Jailbreak takes care of all of that.
 
-->![](../../../../images/func_hooking.svg "Function hooking high level")<-
-*_Figure 1:_ Patching at high level*
+
+![](../../../../images/func_hooking.svg "Function hooking high level")
+
+__Figure 1:__ Patching at high level
+
 
 On the high level the hooking works something like this. `objc_msgSend` instructions are modified in the preamble to jump to another function. This other function will perform our custom tracing features, restore the CPU state and return to a jump table. The jump table is a custom piece of code that will execute the preamble instructions that we've overwritten and jump back to `objc_msgSend` to continue with normal exection.
 
