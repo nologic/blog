@@ -1,20 +1,20 @@
 ---
 layout: post
 title: Tracing Objective-C method calls
-draft: true
+draft: false
 ---
 
-Linux has this great tool called `strace` on OSX there's a slightly worse tool called `dtrace`. Dtrace is not that bad, it gives pretty much everything you need. It is just not as nice as strace. However, on Linux there is also `ltrace` for library tracing. That is arguably more useful because you can see much more granular application activity. Unfortunately, there isn't such a tool on OSX. So, I decided to make - albeit a simpler version for now. I called it `objc_trace`.
+Linux has this great tool called _strace_, on OSX there's a slightly worse tool called _dtrace_. Dtrace is not that bad, it gives pretty much everything you need. It is just not as nice to use as strace. However, on Linux there is also _ltrace_ for library tracing. That is arguably more useful because you can see much more granular application activity. Unfortunately, there isn't such a tool on OSX. So, I decided to make one - albeit a simpler version for now. I called it [objc_trace](https://github.com/nologic/objc_trace).
 
-Objc_trace's functionality is quite limited at the moment. It will print out the name of the method, the class and a list of parameters to the method. In the future it will be expanded to more things, however just knowing which method was called is enough for many debugging purposes.
+Objc_trace's functionality is quite limited at the moment. It will print out the name of the method, the class and a list of parameters to the method. In the future it will be expanded to do more things, however just knowing which method was called is enough for many debugging purposes.
 
 ## Something about the language
 
-I won't spend too much time talking about [Objective-C](https://en.wikipedia.org/wiki/Objective-C), this subject has been covered pretty well by the hacker community. [Phrack Volume 0x0d, Issue 0x42, Phile #0x04 of 0x11](http://phrack.org/issues/66/4.html) is a great article covering various internals of the language. However, I will scratch the surface to review some aspects that are useful for this context.
+Without going into too much detail let's look into the relevant parts of the [Objective-C](https://en.wikipedia.org/wiki/Objective-C) runtime. This subject has been covered pretty well by the hacker community. In [Phrack](http://phrack.org/issues/66/4.html) there is a great article covering various internals of the language. However, I will scratch the surface to review some aspects that are useful for this context.
 
-The language is incredibly dynamic. While still backwards compatible to C (or C++), most of the code is written using classes and methods. A class is exactly what you're thinking of. It can have static or instance methods or fields. For example, you might have a class `Book` with a method `Pages` that returns the contents. You might call it this way:
+The language is incredibly dynamic. While still backwards compatible to C (or C++), most of the code is written using classes and methods a.k.a. structures and function pointers. A class is exactly what you're thinking of. It can have static or instance methods or fields. For example, you might have a class `Book` with a method `Pages` that returns the contents. You might call it this way:
 
-```objective-c
+```Objective-C
 	Book* book = [[Book alloc] init];
 	Page* pages = [book Pages];
 ```
@@ -23,7 +23,7 @@ The `alloc` function is a static method while the others (`init` and `Pages`) ar
 
 If anything above doesn't make sense you might want to read the referenced Phrack article for more details.
 
-Message passing is great, though there are all kinds of efficiency considerations in play. For example, methods that you call will eventually get cashed so that the resolution process occurs much faster. What's important to note is that there is some smoke and mirrors going on.
+Message passing is great, though there are all kinds of efficiency considerations in play. For example, methods that you call will eventually get cached so that the resolution process occurs much faster. What's important to note is that there is some smoke and mirrors going on.
 
 The system is actually not sending messages under the hood. What it is doing is routing the execution using a single library call: `objc_msgSend` [1]. This is due to how the concept of a message is implemented under the hood.
 
@@ -31,7 +31,7 @@ The system is actually not sending messages under the hood. What it is doing is 
 	id objc_msgSend(id self, SEL op, ...)
 ```
 
-Let's take ourselves out of the Objective-C abstractions for a while and think about how things implemented in C. When a method is called the stack and the registers are configured for the `objc_msgSend` call. `id` type is kind of like a `void *` but restricted to Objective-C class instances. `SEL` type is actually `char*` type and refers to selectors, more specifically the methods names (which include parameters). For example, a method that takes two parameters will have a selector that might look something like this: `createGroup:withCapacity:`. Colons signal that there should be a parameter there. Really quite confusing but we won't dwell on that. 
+Let's take ourselves out of the Objective-C abstractions for a while and think about how things are implemented in C. When a method is called the stack and the registers are configured for the `objc_msgSend` call. `id` type is kind of like a `void *` but restricted to Objective-C class instances. `SEL` type is actually `char*` type and refers to selectors, more specifically the methods names (which include parameters). For example, a method that takes two parameters will have a selector that might look something like this: `createGroup:withCapacity:`. Colons signal that there should be a parameter there. Really quite confusing but we won't dwell on that. 
 
 The useful part is that a selector is a C-String that contains the method name and its named parameters. A non-obfuscating compiler does not remove them because the names are needed to resolve the implementing function.
 
@@ -49,13 +49,13 @@ __text:100005144 __YapDatabaseViewState_createGroup_withCapacity__
 
 Notice that the C function is called `__YapDatabaseViewState_createGroup_withCapacity__`, the method is called `createGroup` and the class is `YapDatabaseViewState`. It takes two parameters: an `id` and a `uint64_t`. However, it also takes a `struct YapDatabaseViewState *self` and a `SEL`. This signature essentially matches the signature of `objc_msgSend`, except that the latter has variadic parameters.
 
-This is no mistake. The reason for this is that `objc_msgSend` will actually redirect execution to the implementing function but looking up the selector to function mapping within the class object. Once it finds the target it simply jumps there without having to readjust the parameter registers. This is why I referred to this a routing mechanism, rather than message passing. Of course, I say say that due to the implementation details, rather than the conceptual basis for what is happening here.
+The existence and the location of the extra parameters is not accidental. The reason for this is that `objc_msgSend` will actually redirect execution to the implementing function by looking up the selector to function mapping within the class object. Once it finds the target it simply jumps there without having to readjust the parameter registers. This is why I referred to this as a routing mechanism, rather than message passing. Of course, I say that due to the implementation details, rather than the conceptual basis for what is happening here.
 
 Quite smart actually, because this allows the language to be very dynamic in nature i.e. I can remap SEL to Function mapping and change the implementation of any particular method. This is also great for reverse engineering because this system retains a lot of the labeling information that the developer puts into the source code. I quite like that.
 
 ## The plan
 
-Now that we've seen how Objective-C makes method calls, we notice that `objc_msgSend` becomes a choke point for all method calls. It is like the hub is a poorly setup network with many many users. So, in order to get a list of every method called all we have to do is watch this function. One way to do this is via a debugger such as LLDB or GDB. However, the trouble is that a debugger is fairly heavy and mostly interactive. It's not really good when you want to capture a run or watch the process to pin point a bug, the performance hit might be too much . For more offensive work, you can't embed one of those debuggers into a lite weight implant.
+Now that we've seen how Objective-C makes method calls, we notice that `objc_msgSend` becomes a choke point for all method calls. It is like a hub in a poorly setup network with many many users. So, in order to get a list of every method called all we have to do is watch this function. One way to do this is via a debugger such as LLDB or GDB. However, the trouble is that a debugger is fairly heavy and mostly interactive. It's not really good when you want to capture a run or watch the process to pin point a bug. Also, the performance hit might be too much. For more offensive work, you can't embed one of those debuggers into a lite weight implant.
 
 So, what we are going to do is hook the `objc_msgSend` function on an ARM64 iOS Objective-C program. This will allow us to specify a function to get called before `objc_msgSend` is actually executed. We will do this on a Jailbroken iPhone - so no security mechanism bypasses here, the Jailbreak takes care of all of that.
 
@@ -65,7 +65,7 @@ So, what we are going to do is hook the `objc_msgSend` function on an ARM64 iOS 
 __Figure 1:__ Patching at high level
 
 
-On the high level the hooking works something like this. `objc_msgSend` instructions are modified in the preamble to jump to another function. This other function will perform our custom tracing features, restore the CPU state and return to a jump table. The jump table is a custom piece of code that will execute the preamble instructions that we've overwritten and jump back to `objc_msgSend` to continue with normal execution.
+On the high level the hooking works something like this. `objc_msgSend` instructions are modified in the preamble to jump to another function. This other function will perform our custom tracing features, restore the CPU state and return to a jump table. The jump table is a dynamically generated piece of code that will execute the preamble instructions that we've overwritten and jump back to `objc_msgSend` to continue with normal execution.
 
 ## Hooking
 
@@ -90,7 +90,7 @@ typedef struct {
 } s_jump_page;
 ```
 
-The `s_jump_page` structure contains four instructions that we overwrite (think back to the diagram at step 2). We also keep a backup of these instruction at the end of the struction. I will discuss why we do that later on. Then there are five structures called _jump patches_. These are special sets of instructions that will redirect the CPU to an arbitrary location in memory. _Jump patches_ are also represented by a structure.
+The `s_jump_page` structure contains four instructions that we overwrite (think back to the diagram at step 2). We also keep a backup of these instruction at the end of the structure - not strictly necessary but it makes for easier unhooking. Then there are five structures called _jump patches_. These are special sets of instructions that will redirect the CPU to an arbitrary location in memory. _Jump patches_ are also represented by a structure.
 
 ```c
 typedef struct {
@@ -115,11 +115,19 @@ void d_jump_patch() {
 }
 ```
 
-This is ARM64 Assembly to load a 64-bit value from address `PC+8` then jump to it. The `.long` placeholders are places for target address. In order to use this we simply cast the code i.e. the `d_jump_patch` function pointer to the structure and set the value of the `jmp_addr` field. This is how we implement the function that generates the custom trampoline.
+This is ARM64 Assembly to load a 64-bit value from address `PC+8` then jump to it. The `.long` placeholders are places for the target address.
+
+```c
+s_jump_patch* jump_patch(){
+    return (s_jump_patch*)d_jump_patch;
+}
+```
+
+In order to use this we simply cast the code i.e. the `d_jump_patch` function pointer to the structure and set the value of the `jmp_addr` field. This is how we implement the function that generates the custom trampoline.
 
 ```c
 void write_jmp_patch(void* buffer, void* dst) {
-	// returns the pointer to d_jump_patch.
+    // returns the pointer to d_jump_patch.
     s_jump_patch patch = *(jump_patch());
 
     patch.jmp_addr = (address_t)dst;
@@ -131,8 +139,9 @@ void write_jmp_patch(void* buffer, void* dst) {
 We take advantage of the C compiler automatically copying the entire size of the structure instead of using `memcpy`. In order to patch the original `objc_msgSend` function we use `write_jmp_patch` function and point it to the `hook` function. Of course, before we can do that we copy the original instructions to the _jump page_ for later execution and back up.
 
 ```c
-	//   Building the Trampoline
+    //   Building the Trampoline
     *t_func = *(jump_page());
+    
     // save first 4 32bit instructions
     //   original -> trampoline
     instruction_t* orig_preamble = (instruction_t*)o_func;
@@ -142,7 +151,7 @@ We take advantage of the C compiler automatically copying the entire size of the
     }
 ```
 
-Now that we have saved the original instruction from `objc_msgSend` we have to be aware that we've copied four instructions. A lot can happen in four instructions, all sorts of decisions and branches. In particular I'm worried about branches because they are all relative. So, what we need to do is validate that `t_func->inst` doesn't have any branches. If it does, they will need to modified to preserve functionality.
+Now that we have saved the original instructions from `objc_msgSend` we have to be aware that we've copied four instructions. A lot can happen in four instructions, all sorts of decisions and branches. In particular I'm worried about branches because they can be relative. So, what we need to do is validate that `t_func->inst` doesn't have any branches. If it does, they will need to modified to preserve functionality.
 
 This is why `s_jump_page` has five _jump patches_:
 
@@ -171,9 +180,19 @@ sequential instruction to register X30.
 
 We don't particular care about category three because, register states should not influenced by our hooking mechanism. However, category one and two are PC relative and therefore need to be updated if found in the preamble.
 
-So, we wrote a function that does that. At the moment it only handles a subset of cases, specifically the `B.cond` and `B` instructions. The former is found in `objc_msgSend`.
+So, I wrote a function that updates the instructions. At the moment it only handles a subset of cases, specifically the `B.cond` and `B` instructions. The former is found in `objc_msgSend`.
 
-Now, I don't know about you but I don't particularly like to use complicated bit-wise operations to extract and modify data. It kind of fun to do so, but it is also fragile and hard to read. Luckily for us, C was designed to work at such a low level. Each ARM64 instruction is four bytes and so we use bit fields in C structured to deal with them!
+```asm
+__text:18DBB41C0  EXPORT _objc_msgSend
+__text:18DBB41C0   _objc_msgSend 
+__text:18DBB41C0     CMP             X0, #0
+__text:18DBB41C4     B.LE            loc_18DBB4230
+__text:18DBB41C8   loc_18DBB41C8
+__text:18DBB41C8     LDR             X13, [X0]
+__text:18DBB41CC     AND             X9, X13, #0x1FFFFFFF8
+```
+
+Now, I don't know about you but I don't particularly like to use complicated bit-wise operations to extract and modify data. It's kind of fun to do so, but it is also fragile and hard to read. Luckily for us, C was designed to work at such a low level. Each ARM64 instruction is four bytes and so we use bit fields in C structures to deal with them!
 
 ```c
 typedef struct {
@@ -200,7 +219,7 @@ And this one is the conditional PC relative jump. Back in the day, I wrote a plu
 0  1  0  1  0  1  0  0                                      imm19                         0     cond
 ```
 
-That is what we map our `inst_b_cond` structure. Doing so allows us very easy abstraction over bit manipulation.
+That is what we map our `inst_b_cond` structure to. Doing so allows us very easy abstraction over bit manipulation.
 
 ```c
 void check_branches(s_jump_page* t_func, instruction_t* o_func) {
@@ -229,17 +248,95 @@ void check_branches(s_jump_page* t_func, instruction_t* o_func) {
         ...
 ```
 
-With some important details removed, I'd like to highlight how we are checking the type of the instruction by overlaying the structure over the instruction integer and checking to see if the value of the instruction number is correct. If it is, then we use that pointer to read the offset and modify it point to one of the _jump patches_. In the patch we place the absolute value of the address where the instruction would've jumped were it still back in the original `objc_msgSend` function. We do so for every branch instruction we might encounter.
+With some important details removed, I'd like to highlight how we are checking the type of the instruction by overlaying the structure over the instruction integer and checking to see if the value of the instruction number is correct. If it is, then we use that pointer to read the offset and modify it to point to one of the _jump patches_. In the patch we place the absolute value of the address where the instruction would've jumped were it still back in the original `objc_msgSend` function. We do so for every branch instruction we might encounter.
 
 Once the _jump page_ is constructed we insert the patch into `objc_msgSend` and complete the loop. The most important thing is, of course, that the hook function restores all the registers to the state just before CPU enters into `objc_msgSend` otherwise the whole thing will probably crash.
 
-It is important to note that at the moment we require that the function to be hooked can be anything, but it has to be at least four instructions long because that is the size of the patch.
+It is important to note that at the moment we require that the function to be hooked has to be at least four instructions long because that is the size of the patch. Other than that we don't even care if the target is a proper C function.
 
 Do look through the implementation [4], I skip over some details that glues things together but the important bits that I mention should be enough to understand, in great detail, what is happening under the hood.
 
+## Interpreting the call
+
+Now that function hooking is done, it is time to level up and interpret the results. This is where we actually implement the `objc_trace` functionality. So, the patch to `objc_msgSend` actually redirects execution to one of our functions:
+
+```c
+__attribute__((naked))
+id objc_msgSend_trace(id self, SEL op) {
+    __asm__ __volatile__ (
+        "stp fp, lr, [sp, #-16]!;\n"
+        "mov fp, sp;\n"
+
+        "sub    sp, sp, #(10*8 + 8*16);\n"
+        "stp    q0, q1, [sp, #(0*16)];\n"
+        "stp    q2, q3, [sp, #(2*16)];\n"
+        "stp    q4, q5, [sp, #(4*16)];\n"
+        "stp    q6, q7, [sp, #(6*16)];\n"
+        "stp    x0, x1, [sp, #(8*16+0*8)];\n"
+        "stp    x2, x3, [sp, #(8*16+2*8)];\n"
+        "stp    x4, x5, [sp, #(8*16+4*8)];\n"
+        "stp    x6, x7, [sp, #(8*16+6*8)];\n"
+        "str    x8,     [sp, #(8*16+8*8)];\n"
+
+        "BL _hook_callback64_pre;\n"
+        "mov x9, x0;\n"
+
+        // Restore all the parameter registers to the initial state.
+        "ldp    q0, q1, [sp, #(0*16)];\n"
+        "ldp    q2, q3, [sp, #(2*16)];\n"
+        "ldp    q4, q5, [sp, #(4*16)];\n"
+        "ldp    q6, q7, [sp, #(6*16)];\n"
+        "ldp    x0, x1, [sp, #(8*16+0*8)];\n"
+        "ldp    x2, x3, [sp, #(8*16+2*8)];\n"
+        "ldp    x4, x5, [sp, #(8*16+4*8)];\n"
+        "ldp    x6, x7, [sp, #(8*16+6*8)];\n"
+        "ldr    x8,     [sp, #(8*16+8*8)];\n"
+        // Restore the stack pointer, frame pointer and link register
+        "mov    sp, fp;\n"
+        "ldp    fp, lr, [sp], #16;\n"
+
+        "BR x9;\n"       // call the jump page
+    );
+}
+```
+
+This function stores all calling convention relevant registers on the stack and calls our, `_hook_callback64_pre`, regular C function that can assume that it _is_ the `objc_msgSend` as it was called. In this function we can read parameters as if they were sent to the method call, this includes the class instance and the selector. Once `_hook_callback64_pre` returns our `objc_msgSend_trace` function will restore the registers and branch to the configured _jump page_ which will eventually branch back to the original call.
+
+```c
+void* hook_callback64_pre(id self, SEL op, void* a1, void* a2, void* a3, void* a4, void* a5) {
+	// get the important bits: class, function
+    char* classname = (char*) object_getClassName( self );
+    if(classname == NULL) {
+        classname = "nil";
+    }
+    
+    char* opname = (char*) op;
+    ...
+    return original_msgSend;
+}
+```
+
+Once we get into the `hook_callback64_pre` function, things get much simpler since we can use the _objc_ API to do our work. The only trick is the realization that the `SEL` type is actually a `char*` which we cast directly. This gives us the full selector. Counting colons will give us the count of parameters the method is expecting. When everything is done the output looks something like this:
+
+```
+iPhone:~ root# DYLD_INSERT_LIBRARIES=libobjc_trace.dylib /Applications/Maps.app/Maps
+objc_msgSend function substrated from 0x197967bc0 to 0x10065b730, trampoline 0x100718000
+000000009c158310: [NSStringROMKeySet_Embedded alloc ()]
+000000009c158310: [NSSharedKeySet initialize ()]
+000000009c158310: [NSStringROMKeySet_Embedded initialize ()]
+000000009c158310: [NSStringROMKeySet_Embedded init ()]
+000000009c158310: [NSStringROMKeySet_Embedded initWithKeys:count: (0x0 0x0 )]
+000000009c158310: [NSStringROMKeySet_Embedded setSelect: (0x1 )]
+000000009c158310: [NSStringROMKeySet_Embedded setC: (0x1 )]
+000000009c158310: [NSStringROMKeySet_Embedded setM: (0xf6a )]
+000000009c158310: [NSStringROMKeySet_Embedded setFactor: (0x7b5 )]
+```
+
 ## Conclusion
 
-We modify the `objc_msgSend` preamble to jump to our hook function. The hook function then does whatever and restored the CPU state. It then jumps into the _jump page_ which executes the possibly modified preamble instruction and jumps back into `objc_msgSend` to continue execution. We also maintain the original unmodified preamble for restoration when we need to remove the hook.
+We modify the `objc_msgSend` preamble to jump to our hook function. The hook function then does whatever and restores the CPU state. It then jumps into the _jump page_ which executes the possibly modified preamble instructions and jumps back into `objc_msgSend` to continue execution. We also maintain the original unmodified preamble for restoration when we need to remove the hook. Then we use the parameters that were sent to `objc_msgSend` to interpret the call and print out which method was called with which parameters.
+
+As you can see using function hooking for making _objc_trace_ is but one use case. But this use case is incredibly useful for blackbox security testing. That is particularly true for initial discovery work of learning about the application.
 
 -----
 [1] [objc-msg-arm64.s](http://www.opensource.apple.com/source/objc4/objc4-647/runtime/Messengers.subproj/objc-msg-arm64.s)
