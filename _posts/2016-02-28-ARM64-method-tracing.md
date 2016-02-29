@@ -19,7 +19,7 @@ The language is incredibly dynamic. While still backwards compatible to C (or C+
 	Page* pages = [book Pages];
 ```
 
-The `alloc` function is a static method while the others (`init` and `Pages`) are dynamic. What actually happens is that the system sends messages to the object or the static class. The message contains the class name, the instance, the method name and any parameters. The the runtime will resolve which compiled function actually implements this method and call that.
+The `alloc` function is a static method while the others (`init` and `Pages`) are dynamic. What actually happens is that the system sends messages to the object or the static class. The message contains the class name, the instance, the method name and any parameters. The runtime will resolve which compiled function actually implements this method and call that.
 
 If anything above doesn't make sense you might want to read the referenced Phrack article for more details.
 
