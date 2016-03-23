@@ -4,7 +4,7 @@ title: Tracing Objective-C method calls
 draft: false
 ---
 
-Linux has this great tool called _strace_, on OSX there's a slightly worse tool called _dtrace_. Dtrace is not that bad, it gives pretty much everything you need. It is just not as nice to use as strace. However, on Linux there is also _ltrace_ for library tracing. That is arguably more useful because you can see much more granular application activity. Unfortunately, there isn't such a tool on OSX. So, I decided to make one - albeit a simpler version for now. I called it [objc_trace](https://github.com/nologic/objc_trace).
+Linux has this great tool called _strace_, on OSX there's a tool called _dtruss_ - based on _dtrace_. Dtruss is great in functionality, it gives pretty much everything you need. It is just not as nice to use as strace. However, on Linux there is also _ltrace_ for library tracing. That is arguably more useful because you can see much more granular application activity. Unfortunately, there isn't such a tool on OSX. So, I decided to make one - albeit a simpler version for now. I called it [objc_trace](https://github.com/nologic/objc_trace).
 
 Objc_trace's functionality is quite limited at the moment. It will print out the name of the method, the class and a list of parameters to the method. In the future it will be expanded to do more things, however just knowing which method was called is enough for many debugging purposes.
 
