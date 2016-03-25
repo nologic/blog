@@ -4,13 +4,13 @@ title: Automating the UI for blackbox testing
 draft: true
 ---
 
-During blackbox security testing, it is often the case that you need to explore the application. Mostly, to understand what it does and what sort of interactions it has with the outside world. It is also a good way to determine what code a user might end up exercising during their use of the application. In case of iOS, most of the App activity will be user triggered and the other parts will be things like polling for changes. Either way, the App's activity and any potential vulnerabilities are largely triggered by the user.
+During blackbox security testing, it is often the case that you need to explore the application. Mostly to understand what it does and what sort of interactions it has with the outside world. It is also a good way to determine what code a user might end up exercising during their use of the application. In case of iOS, most of the App activity will be user triggered and the other parts will be things like polling of the web api for changes. Either way, the App's activity and any potential vulnerabilities are largely triggered by the user.
 
-In this post I introduce __CHAOTICMARCH__ (CM), an engine for driving the UI for doing blackbox testing of an iOS App. CM is a scriptable engine that comes with some basic scripts to locate and trigger buttons. It gives the user the freedom to define their own logic for however they wish to perform the test.
+In this post I introduce __CHAOTICMARCH__ (CM), an engine for driving the UI while doing blackbox testing of an iOS App. CM is a scriptable engine that comes with some basic scripts to locate and trigger buttons. It gives the researcher the freedom to define their own logic for however they wish to perform the test.
 
-I would like to encourage researchers to develop and submit their own logic, so that the community could have a knowledge base for general and specific testing of iOS Apps. Together, we could truly build up an amazing set of automated tests that would be transferable between versions or even applications. A large dataset would able us to track changes and keep tests as thorough as possible.
+I would like to encourage researchers to develop and submit their own logic, so that the community could have a knowledge base for general and specific testing of iOS Apps. Together, we could truly build up an amazing set of automated tests that would be transferable between versions or even applications. A large base would enable us to track changes and keep tests as thorough as possible.
 
-The source code and a user manual is located in the the [CHAOTICMARCH](https://github.com/nologic/chaoticmarch) GitHub repository. The code is, of course, still in very early stages, but it is very stable and will be extended more in the near future. We will also utilize [objc_trace](https://github.com/nologic/objc_trace) tool to gather code coverage information.
+The source code and the user manual is located at the [CHAOTICMARCH](https://github.com/nologic/chaoticmarch) GitHub repository. The code is, of course, still in very early stages, but it is very stable and will be extended in the near future. Also we can utilize [objc_trace](https://github.com/nologic/objc_trace) (or similar) tool to gather code coverage information. _objc_trace_ records the Objective-C functions that have been executed, similar to the functionality of _ltrace_.
 
 ## iOS UI Constructs
 
