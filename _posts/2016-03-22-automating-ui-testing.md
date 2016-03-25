@@ -12,7 +12,7 @@ I would like to encourage researchers to develop and submit their own logic, so 
 
 The source code and a user manual is located in the the [CHAOTICMARCH](https://github.com/nologic/chaoticmarch) GitHub repository. The code is, of course, still in very early stages, but it is very stable and will be extended more in the near future. We will also utilize [objc_trace](https://github.com/nologic/objc_trace) tool to gather code coverage information.
 
-# iOS UI Constructs
+## iOS UI Constructs
 
 The UI on iOS is actually quite simple. Basically all of the components step from the `UIView` class and are organized as a tree rooted at `UIApp.keyWindow`. To access children you would use the `subviews` array available at each component:
 
@@ -41,7 +41,7 @@ cy# UIApp.keyWindow .recursiveDescription
 
 Of course, the tree above is cut off - but you get the idea. This example comes from the DamnVulnerableApp UI. The full tree goes on for several pages and has a similar repeating pattern. At this point I would like to thank Objective-C for providing so much metadata. We will be using this to develop out automation mechanisms.
 
-# Scripting a click around
+## Scripting a click around
 Without going into too much details, we want to click on buttons, fill in forms and swipe scrollable things. However, this means that we need to be able to accurately detect buttons, form and swipable areas. Swiping is harder but buttons and forms are actually relatively easy. We simply have to choose components that qualify as such items. For example, buttons are selected as follows:
 
 ```lua
@@ -114,8 +114,17 @@ Now, because we are polling the screen for buttons every iteration we might end 
 
 Once there are no buttons left, we wait for a minute or so. This is done using the `waitTime` variable in the main loop. It is a count down variable, which along with the sleep at every loop iteration creates a wait interval. This is when the analyst gets a chance to assist the engine and go somewhere new or for the App to react and change it's interface.
 
-# Demonstration
+## Demonstration
 
 <center>
 <iframe width="420" height="315" src="https://www.youtube.com/embed/Gtd9wOpFK8M" frameborder="0" allowfullscreen></iframe></center>
+
+A demo speaks a thousand words. The culmination of everything we've talked about above is shown in this video. We take an App by [HD Supplies](https://itunes.apple.com/us/app/hd-supply-facilities-maintenance/id585691352) and let CHAOTICMARCH have it's way with the App. As you can see it detects many buttons and enters the text into the search box. We also demonstrate the capability of replaying preprogrammed touch events. These events can be recorded using something like [AutoTouch](https://autotouch.net). If you use this tool to record touch events, then the output script will be directly compatible with CHAOTICMARCH.
+
+Of course, it would be nice if the scripts are smarter is recognizing the semantics of the clickable and text field components. This is something we are still working on. Using LUA for this purpose makes things much simpler as we can focus on the logic rather than the mechanics.
+
+## Conclusion
+We have introduced CHAOTICMARCH, a tool for automating blackbox testing of iOS Apps. It injects into a running application to query the UI and trigger events. The logic is driven by an automatically loaded LUA script. Once the UI is queries, the LUA script will decide which buttons to click and forms to fill in. 
+
+Using CHAOTICMATCH frees the researchers from having manually explore the application. Also, it lets us as a community to build up a knowledge base of scripts to handle edge cases and come up with innovative algorithms to perform testing. In combination with other tools such as [MITM Proxy](https://mitmproxy.org/) and [Objc_trace](https://github.com/nologic/objc_trace) we can develop a decent coverage map of the App's activity.
 
