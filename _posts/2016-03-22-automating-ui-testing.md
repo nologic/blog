@@ -18,14 +18,15 @@ The UI on iOS is actually quite simple. Basically all of the components step fro
 
 ```javascript
 cy# UIApp.keyWindow.subviews
-@[#"<UIView: 0x14552a690; frame = (0 0; 320 568); autoresize = W+H; layer = <CALayer: 0x174037d80>>",#"<UIView: 0x145699a50; frame = (39.5 327.5; 40 40); clipsToBounds = YES; alpha = 0; layer = <CALayer: 0x17022eb20>>"]
+@[#"<UIView: 0x14552a690; frame = (0 0; 320 568); autoresize = W+H; 
+  layer = <CALayer: 0x174037d80>>",
+  #"<UIView: 0x145699a50; frame = (39.5 327.5; 40 40); 
+  clipsToBounds = YES; alpha = 0; layer = <CALayer: 0x17022eb20>>"]
 ```
 
 You can also list the entire UI tree for examination when you use [Cycrypt](http://www.cycript.org/). Cycrypt is a scriptable inspection tool that let's user analyzer the internal state of the App. It can be installed using the Cydia appstore. The UI tree we will be dealing with looks like this:
 
 ```javascript
-cy# ?expand
-expand == true
 cy# UIApp.keyWindow .recursiveDescription
 @"<UIWindow: 0x1456209f0; frame = (0 0; 320 568); gestureRecognizers = <NSArray: 0x170053560>; layer = <UIWindowLayer: 0x170033de0>>
    | <UIView: 0x14552a690; frame = (0 0; 320 568); autoresize = W+H; layer = <CALayer: 0x174037d80>>
@@ -46,8 +47,8 @@ Without going into too much details, we want to click on buttons, fill in forms 
 ```lua
 -- Basically anything we might consider clickable
 local buttons = findOfTypes("UIButton", "UINavigationItemButtonView", 
-    "UINavigationItemView", "_UIAlertControllerActionView", "UISegmentLabel", 
-    "UILabel", "")
+    "UINavigationItemView", "_UIAlertControllerActionView", 
+    "UISegmentLabel", "UILabel", "")
 ```
 
 This code is found as part of the `getButton` function in `post_all-common.lua`. This code is loaded for all app as a library that you could use. The function will return a LUA map of a button description. A button looks like this:
@@ -108,3 +109,13 @@ function click_button(button)
     hideCircle(0);
 end
 ```
+
+Now, because we are polling the screen for buttons every iteration we might end up in a situation where there are no buttons. However, it maybe because the user is seeing an alert box. Such boxes are still within the App UI tree but do not really contain buttons. So, the `check_alert` function will look for labels that match expected text such as "Ok". It will click that text in the hopes of getting rid of the alert box. This doesn't always work and can definitely be made more accurate. However, it covers many use cases.
+
+Once there are no buttons left, we wait for a minute or so. This is done using the `waitTime` variable in the main loop. It is a count down variable, which along with the sleep at every loop iteration creates a wait interval. This is when the analyst gets a chance to assist the engine and go somewhere new or for the App to react and change it's interface.
+
+# Demonstration
+
+<center>
+<iframe width="420" height="315" src="https://www.youtube.com/embed/Gtd9wOpFK8M" frameborder="0" allowfullscreen></iframe></center>
+
