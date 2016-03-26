@@ -14,7 +14,7 @@ The source code and the user manual is located at the [CHAOTICMARCH](https://git
 
 ## iOS UI Constructs
 
-The UI on iOS is actually quite simple. Basically all of the components step from the `UIView` class and are organized as a tree rooted at `UIApp.keyWindow`. To access children you would use the `subviews` array available at each component:
+At the low levels, the UI on iOS is actually quite simple. Basically all of the components stem from the `UIView` base class and are organized as a tree rooted at `UIApp.keyWindow`. To access the children you would use the `subviews` array available at each component:
 
 ```javascript
 cy# UIApp.keyWindow.subviews
@@ -24,7 +24,7 @@ cy# UIApp.keyWindow.subviews
   clipsToBounds = YES; alpha = 0; layer = <CALayer: 0x17022eb20>>"]
 ```
 
-You can also list the entire UI tree for examination when you use [Cycrypt](http://www.cycript.org/). Cycrypt is a scriptable inspection tool that let's user analyzer the internal state of the App. It can be installed using the Cydia appstore. The UI tree we will be dealing with looks like this:
+This is the abstract representation which is then used to draw components on the screen. You can also list the entire UI tree for examination by using [Cycript](http://www.cycript.org/). Cycript is a scriptable inspection tool that lets users analyzer the internal state of the App. It can be installed using the Cydia appstore. This appstore is installed by any of the popular Chinese jailbreaks. [Pangu](http://pangu.io/) or [Taig](http://www.taig.com/en/) are the current front runners. The UI tree we will be dealing with looks like this:
 
 ```javascript
 cy# UIApp.keyWindow .recursiveDescription
@@ -39,10 +39,10 @@ cy# UIApp.keyWindow .recursiveDescription
    |    |    |    |    |    | <UITableViewLabel: 0x145635370; frame = (16 0; 269 44); text = 'Transport Layer Security'; clipsToBounds = YES; opaque = NO; layer = <_UILabelLayer: 0x170099e60>>
 ```
 
-Of course, the tree above is cut off - but you get the idea. This example comes from the DamnVulnerableApp UI. The full tree goes on for several pages and has a similar repeating pattern. At this point I would like to thank Objective-C for providing so much metadata. We will be using this to develop out automation mechanisms.
+Of course, the tree above is cut off - but you get the idea. This example comes from the DamnVulnerableApp UI. The full tree goes on for several pages and has a similar repeating pattern. At this point I would like to thank Objective-C for providing us with so much metadata in the binary. We will be using this to develop our automation mechanisms.
 
 ## Scripting a click around
-Without going into too much details, we want to click on buttons, fill in forms and swipe scrollable things. However, this means that we need to be able to accurately detect buttons, form and swipable areas. Swiping is harder but buttons and forms are actually relatively easy. We simply have to choose components that qualify as such items. For example, buttons are selected as follows:
+Without going into too many details, we want to click on buttons, fill in forms and swipe scrollable things. However, this means that we need to be able to accurately detect buttons, forms and swipable areas. Swiping is harder but buttons and forms are actually relatively easy. We simply have to choose components that qualify as such items. For example, buttons are selected as follows:
 
 ```lua
 -- Basically anything we might consider clickable
@@ -51,7 +51,7 @@ local buttons = findOfTypes("UIButton", "UINavigationItemButtonView",
     "UISegmentLabel", "UILabel", "")
 ```
 
-This code is found as part of the `getButton` function in `post_all-common.lua`. This code is loaded for all app as a library that you could use. The function will return a LUA map of a button description. A button looks like this:
+This code is found as part of the `getButton` function in `post_all-common.lua`. Please read the repository README for details about how the LUA scripts are structured and loaded. This code is loaded for all apps as a library that you could use. The function will return a LUA map of a button description. A button map looks like this:
 
 ```javascript
 {
@@ -63,9 +63,9 @@ This code is found as part of the `getButton` function in `post_all-common.lua`.
 }
 ```
 
-The `findOfTypes` function returns a LUA array i.e. number keyed map, of the button description maps. The the `getButton` function will look for the button that hasn't been clicked yet. This state is passed to the `getButton` function. The state is a map that should be maintained by the user. Once a button has been clicked, the user should enter a key of the button text into the state map.
+The `findOfTypes` function returns a LUA array i.e. number keyed map, of the button description maps. The `getButton` function will look for the button that hasn't been clicked yet. This click state is passed to the `getButton` function. The state is a map that should be maintained by the user. Once a button has been clicked, the user should enter a key of the button text into the state map.
 
-We use this function is `post_all-click_around.lua` script to exercise the various buttons on the screen. The process is really quite simple. Here's a reduced sized code that accomplishes just what we want.
+We use this while loop in `post_all-click_around.lua` script to exercise the various buttons on the screen. The process is really quite simple. Here's a reduced size code that accomplishes just what we want.
 
 ```lua
 while (attempts > 0) do
@@ -91,9 +91,9 @@ while (attempts > 0) do
 end
 ```
 
-Basically, it iterates across various clickable things and enters them into the state to prevent repetition. After a button is clicked, the loop will wait some time to let the App react and then will look for another button. The process is very predictable and reproducible. With this mechanism it would be possible to build more complex logic.
+On the high level, it iterates across various clickable things and enters them into the state to prevent repetition. After a button is clicked, the loop will wait some time to let the App react. Then it will look for another button. The process is very predictable and reproducible. With this mechanism it would be possible to build more complex logic, although at the moment we don't have a way of reading the meaning of an image button.
 
-The `click_button` function is actually built on top of `touchDown` and `touchUp` mechanisms. It will also draw a circle on the screen to indicate where CHAOTICMARCH has clicked.
+The `click_button` function is actually built on top of `touchDown` and `touchUp` mechanisms. The touch functions use the [SimulateTouch](https://github.com/iolate/SimulateTouch) library to generate touch events which in tern simulates button click events. The function will also draw a circle on the screen to indicate where CHAOTICMARCH has clicked. This is just a convenience measure to show where the script has clicked.
 
 ```lua
 function click_button(button)
@@ -110,21 +110,22 @@ function click_button(button)
 end
 ```
 
-Now, because we are polling the screen for buttons every iteration we might end up in a situation where there are no buttons. However, it maybe because the user is seeing an alert box. Such boxes are still within the App UI tree but do not really contain buttons. So, the `check_alert` function will look for labels that match expected text such as "Ok". It will click that text in the hopes of getting rid of the alert box. This doesn't always work and can definitely be made more accurate. However, it covers many use cases.
+Now, because we are polling the screen for buttons every iteration we might end up in a situation where there are no buttons. However, it may be because the user is seeing an alert box. Such boxes are still within the App UI tree but do not really contain buttons. So, the `check_alert` function will look for labels that match expected text such as "Ok". It will click that text in the hopes of getting rid of the alert box. This doesn't always work and can definitely be made more accurate. However, it covers many use cases.
 
-Once there are no buttons left, we wait for a minute or so. This is done using the `waitTime` variable in the main loop. It is a count down variable, which along with the sleep at every loop iteration creates a wait interval. This is when the analyst gets a chance to assist the engine and go somewhere new or for the App to react and change it's interface.
+Once there are no buttons left, we wait for a minute or so. This is done using the `waitTime` variable in the main loop. It is a count down variable, which along with the sleep at every loop iteration creates a wait interval. This is where the researcher gets a chance to assist the engine and go somewhere new or for the App to react and change it's interface.
 
 ## Demonstration
+What's a tool without a video demo. So, let's have a look at how it performs with a simple application. This one is mostly just a wrapper around a webview. The webview will perform most of the heavy lifting, but there are still some UI components for us to interact with.
 
 <center>
 <iframe width="420" height="315" src="https://www.youtube.com/embed/Gtd9wOpFK8M" frameborder="0" allowfullscreen></iframe></center>
 
-A demo speaks a thousand words. The culmination of everything we've talked about above is shown in this video. We take an App by [HD Supplies](https://itunes.apple.com/us/app/hd-supply-facilities-maintenance/id585691352) and let CHAOTICMARCH have it's way with the App. As you can see it detects many buttons and enters the text into the search box. We also demonstrate the capability of replaying preprogrammed touch events. These events can be recorded using something like [AutoTouch](https://autotouch.net). If you use this tool to record touch events, then the output script will be directly compatible with CHAOTICMARCH.
+A demo speaks a thousand words. The culmination of everything we've talked about above is shown in this video. We take an App by [HD Supplies](https://itunes.apple.com/us/app/hd-supply-facilities-maintenance/id585691352) and let CHAOTICMARCH have its way with the App. As you can see it detects many buttons and enters the text into the search box. Also, in this demo, I show the capability of replaying preprogrammed touch events. These events can be recorded using something like [AutoTouch](https://autotouch.net). If you use this tool to record touch events, then the output script will be directly compatible with CHAOTICMARCH.
 
-Of course, it would be nice if the scripts are smarter is recognizing the semantics of the clickable and text field components. This is something we are still working on. Using LUA for this purpose makes things much simpler as we can focus on the logic rather than the mechanics.
+Of course, it would be nice if the scripts are smarter in recognizing the semantics of the clickable and text field components. This is something we are still working on. Using LUA for this purpose makes things much simpler as we can focus on the logic rather than the mechanics.
 
 ## Conclusion
-We have introduced CHAOTICMARCH, a tool for automating blackbox testing of iOS Apps. It injects into a running application to query the UI and trigger events. The logic is driven by an automatically loaded LUA script. Once the UI is queries, the LUA script will decide which buttons to click and forms to fill in. 
+We have introduced CHAOTICMARCH, a tool for automating blackbox testing of iOS Apps. The tool injects into a running application to query the UI and trigger events. The logic is driven by an automatically loaded LUA script. Once the UI is queried, the LUA script will decide which buttons to click and forms to fill in. 
 
-Using CHAOTICMATCH frees the researchers from having manually explore the application. Also, it lets us as a community to build up a knowledge base of scripts to handle edge cases and come up with innovative algorithms to perform testing. In combination with other tools such as [MITM Proxy](https://mitmproxy.org/) and [Objc_trace](https://github.com/nologic/objc_trace) we can develop a decent coverage map of the App's activity.
+Using CHAOTICMATCH frees the researchers from having to manually explore the application. Also, it lets us, as a community, to build up a knowledge base of scripts to handle edge cases and come up with innovative algorithms to perform testing. In combination with other tools such as [MITM Proxy](https://mitmproxy.org/) and [Objc_trace](https://github.com/nologic/objc_trace) we can develop a decent coverage map of the App's activity.
 
