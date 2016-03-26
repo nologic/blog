@@ -115,7 +115,7 @@ Now, because we are polling the screen for buttons every iteration we might end 
 Once there are no buttons left, we wait for a minute or so. This is done using the `waitTime` variable in the main loop. It is a count down variable, which along with the sleep at every loop iteration creates a wait interval. This is where the researcher gets a chance to assist the engine and go somewhere new or for the App to react and change it's interface.
 
 ## Demonstration
-What's a tool without a video demo. So, let's have a look at how it performs with a simple application. This one is mostly just a wrapper around a webview. The webview will perform most of the heavy lifting, but there are still some UI components for us to interact with.
+What's a tool without a video demo? So, let's have a look at how it performs with a simple application. This particular App is mostly just a wrapper around a webview. The webview will perform most of the heavy lifting, but there are still some UI components for us to interact with.
 
 <center>
 <iframe width="420" height="315" src="https://www.youtube.com/embed/Gtd9wOpFK8M" frameborder="0" allowfullscreen></iframe></center>
