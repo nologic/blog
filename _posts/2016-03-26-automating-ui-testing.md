@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Automating the UI for blackbox testing
-draft: true
+draft: false
 ---
 
 During blackbox security testing, it is often the case that you need to explore the application. Mostly to understand what it does and what sort of interactions it has with the outside world. It is also a good way to determine what code a user might end up exercising during their use of the application. In case of iOS, most of the App activity will be user triggered and the other parts will be things like polling of the web api for changes. Either way, the App's activity and any potential vulnerabilities are largely triggered by the user.
