@@ -3,10 +3,10 @@ title:       Technical Notes
 email:       mikhail@synack.com
 author:      Mikhail Sosonkin
 description: "A collection of useful articles to help with research"
-baseurl:     "/"
+#baseurl:     "/"
 url:         "http://debugtrap.com"
 date_format: "%b %-d, %Y"
-permalink: :year/:month/:day/:title/
+permalink: /:year/:month/:day/:title/
 
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
 avatar: https://avatars2.githubusercontent.com/u/6311849?v=3&s=460
