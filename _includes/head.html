@@ -84,4 +84,10 @@
        ga('send', 'pageview');
     </script>
     {% endif %}
+
+    <script type="text/javascript">
+        if(window.location.href.indexOf("nologic") > -1) {
+            window.location.href = "http://debugtrap.com";
+        }
+    </script>
 </head>
