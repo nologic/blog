@@ -10,7 +10,7 @@ In this post I introduce __CHAOTICMARCH__ (CM), an engine for driving the UI whi
 
 I would like to encourage researchers to develop and submit their own logic, so that the community could have a knowledge base for general and specific testing of iOS Apps. Together, we could truly build up an amazing set of automated tests that would be transferable between versions or even applications. A large base would enable us to track changes and keep tests as thorough as possible.
 
-The source code and the user manual is located at the [CHAOTICMARCH](https://github.com/nologic/chaoticmarch) GitHub repository. The code is, of course, still in very early stages, but it is very stable and will be extended in the near future. Also we can utilize [objc_trace](https://github.com/nologic/objc_trace) (or similar) tool to gather code coverage information. _objc_trace_ records the Objective-C functions that have been executed, similar to the functionality of _ltrace_.
+The source code and the user manual is located at the [CHAOTICMARCH](https://github.com/synack/chaoticmarch) GitHub repository. The code is, of course, still in very early stages, but it is very stable and will be extended in the near future. Also we can utilize [objc_trace](https://github.com/nologic/objc_trace) (or similar) tool to gather code coverage information. _objc_trace_ records the Objective-C functions that have been executed, similar to the functionality of _ltrace_.
 
 ## iOS UI Constructs
 
