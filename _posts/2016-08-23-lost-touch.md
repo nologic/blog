@@ -23,6 +23,31 @@ Apple IPC](https://thecyberwire.com/events/docs/IanBeer_JSS_Slides.pdf) talk.
 Last thing about these mach messages. Services like the touch server will start listing ports which clicks can look up via [bootstrap_lookup](http://opensource.apple.com//source/launchd/launchd-328/launchd/src/libbootstrap.c) function calls. They work similar to DNS where the client specifies name and receives a numeric port value. The touch library specifically uses `CFMessagePort` abstraction for IPC which is explained very nicely by [Damien DeVille](http://ddeville.me/2015/02/interprocess-communication-on-ios-with-mach-messages). The libsimulatetouch client library uses the `CFMessagePortSendRequest` function to send messages to the server side.
 
 ## Sniffing the IPC
-The problem we are trying solve is the mystery of why touch events have been disappearing. My first intuition was that perhaps these port messages were not getting to the server for some reason. So, I've decided to sniff them in the same way that I would with network traffic. After much googling, I found almost nothing for sniffing mach messages except for an old blog about [mach_shark](http://blog.wuntee.sexy/CVE-2015-3795) which unfortunately was not released (and, on the last check the blog site was down - here's a [web archive link](http://web.archive.org/web/20160413172707/http://blog.wuntee.sexy/CVE-2015-3795/)).
+The problem we are trying solve is the mystery of why touch events have been disappearing. My first intuition was that perhaps these port messages were not getting to the server for some reason. So, I've decided to sniff them in the same way that I would with network traffic. After much googling, I found almost nothing for sniffing mach messages except for an old blog about [mach_shark](http://blog.wuntee.sexy/CVE-2015-3795) which unfortunately was not released (and, on the last check the blog site was down -- here's a [web archive link](http://web.archive.org/web/20160413172707/http://blog.wuntee.sexy/CVE-2015-3795/)).
+
+### What are we looking for?
+The messages that sent to a port by name `kr.iolate.simulatetouch`. These messages are very simple this following structure:
+
+```C
+	typedef enum {  // sent as part of the 'type' field below
+	    STTouchMove = 0,
+	    STTouchDown,
+	    STTouchUp,
+
+	    // For these types, (int)point_x denotes button type
+	    STButtonUp,
+	    STButtonDown
+	} STTouchType;
+    
+    typedef struct {
+        int type;       // STTouchType values (Up, down, move, etc)
+        int index;      // pathIndex holder in message
+        float point_x;  // X coordinate
+        float point_y;  // Y coordinate
+    } STEvent;
+```
+
+Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to send a message returns with a response. The response for each of the client's request will be an integer which gives the path index. The path index is used to identify one continues touch sequence. For example, if I request a touch down, I will get an ID. Then I will use this ID to issue a touch up which could be at a different location. The size of the response message is four bytes.
+
 -----
 
