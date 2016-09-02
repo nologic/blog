@@ -52,8 +52,10 @@ Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to
 The message processing pattern is very simple:
 
 ```C
-static CFDataRef messageCallBack(CFMessagePortRef local, SInt32 msgid, 
-                                 CFDataRef cfData, void *info)
+static CFDataRef messageCallBack(CFMessagePortRef local, 
+                                 SInt32 msgid, 
+                                 CFDataRef cfData, 
+                                 void *info)
 {
    ...
    int pathIndex = touch->index;
@@ -74,13 +76,16 @@ static CFDataRef messageCallBack(CFMessagePortRef local, SInt32 msgid,
 
 ...
 
-CFMessagePortRef local = CFMessagePortCreateLocal(NULL, CFSTR(MACH_PORT_NAME), 
-                                                  messageCallBack, NULL, NULL);
+CFMessagePortRef local = CFMessagePortCreateLocal(NULL, 
+                            CFSTR(MACH_PORT_NAME), 
+                            messageCallBack, NULL, NULL);
 
 ...
 
-CFRunLoopSourceRef source = CFMessagePortCreateRunLoopSource(NULL, local, 0);
-CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopDefaultMode);
+CFRunLoopSourceRef source = CFMessagePortCreateRunLoopSource(
+                                  NULL, local, 0);
+CFRunLoopAddSource(CFRunLoopGetCurrent(), 
+                   source, kCFRunLoopDefaultMode);
 
 ...
 ```
@@ -109,5 +114,8 @@ static int getExtraIndexNumber()
 The function will get a random number between zero and thirteen, inclusive. If that path was already allocated, it will attempt to get another number, randomly (!), again by calling itself recursively. Who does that?!
 
 Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device -- if that code is malicious, you've got bigger problems to deal with.
+
+
+
 -----
 
