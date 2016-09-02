@@ -125,48 +125,50 @@ I prefer minimally intrusive methods of introspection. For that reason I've chos
 To find out name to port number mapping, we'll break point on the look up functions. There are three functions: `bootstrap_look_up` which is a wrapper for `bootstrap_look_up2`. There is also `bootstrap_look_up3` which looks to be a private function, but used by several libraries. So, we will try to break on the latter two.
 
 ```Python
-    # break on bootstrap_look_up2 start
-    bs_look2 = target.BreakpointCreateByName('bootstrap_look_up2', 'libxpc.dylib')
-    bs_look2.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up')
+# break on bootstrap_look_up2 start
+bs_look2 = target.BreakpointCreateByName('bootstrap_look_up2', 'libxpc.dylib')
+bs_look2.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up')
 
-    # find the end of the function
-    for bp in bs_look2:
-        insts = target.ReadInstructions(bp.GetAddress(), 100)
-        first_ret = [i.GetAddress().GetLoadAddress(target) for i in insts if i.GetMnemonic(target) == 'ret']
+# find the end of the function
+for bp in bs_look2:
+    insts = target.ReadInstructions(bp.GetAddress(), 100)
+    first_ret = [i.GetAddress().GetLoadAddress(target) 
+                  for i in insts if i.GetMnemonic(target) == 'ret']
 
-        # Just look for the first RET instruction
-        if(len(first_ret) > 0):
-            bs_look2_end = target.BreakpointCreateByAddress(first_ret[0])
-            bs_look2_end.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up_end')
+    # Just look for the first RET instruction
+    if(len(first_ret) > 0):
+        bs_look2_end = target.BreakpointCreateByAddress(first_ret[0])
+        bs_look2_end.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up_end')
 
-            print bs_look2_end
+        print bs_look2_end
 ```
 
 We don't need to break on `bootstrap_look_up` because `bootstrap_look_up2` in enough.
 
 ```Python
-    # set on rocket if available, otherwise regular crashes.
-    bs_look3 = target.BreakpointCreateByName('rocketbootstrap_look_up', 'librocketbootstrap.dylib')
-    if(not bs_look3.IsValid()):
-        bs_look3 = target.BreakpointCreateByName('bootstrap_look_up3', 'libxpc.dylib')
+# set on rocket if available, otherwise regular crashes.
+bs_look3 = target.BreakpointCreateByName('rocketbootstrap_look_up', 'librocketbootstrap.dylib')
+if(not bs_look3.IsValid()):
+    bs_look3 = target.BreakpointCreateByName('bootstrap_look_up3', 'libxpc.dylib')
 
-    bs_look3.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up')
+bs_look3.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up')
 
-    # look for the end of function
-    for bp in bs_look3:
-        insts = target.ReadInstructions(bp.GetAddress(), 200)
-        first_ret = [i.GetAddress().GetLoadAddress(target) for i in insts if i.GetMnemonic(target) == 'ret']
+# look for the end of function
+for bp in bs_look3:
+    insts = target.ReadInstructions(bp.GetAddress(), 200)
+    first_ret = [i.GetAddress().GetLoadAddress(target) 
+                  for i in insts if i.GetMnemonic(target) == 'ret']
 
-        if(len(first_ret) > 0):
-            bs_look3_end = target.BreakpointCreateByAddress(first_ret[0])
-            bs_look3_end.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up_end')
+    if(len(first_ret) > 0):
+        bs_look3_end = target.BreakpointCreateByAddress(first_ret[0])
+        bs_look3_end.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up_end')
 
-            print bs_look3_end
+        print bs_look3_end
 ```
 
 We also want to break on `bootstrap_look_up3`, however something about how breakpoints work and how [`librocket_bootstrap`](http://iphonedevwiki.net/index.php/RocketBootstrap) hooks the function clashes with catastrophic results. So, to handle this usecase we just support breaking on the rocket_bootstrap version which is `rocketbootstrap_look_up`.
 
-In both case we set a handler function that will analyze the function parameters to extract the name and match with the user specified name.
+In both case we set a handler function that will analyze the function parameters to extract the name and match with the user specified name. `mach_sniff.rocketbootstrap_look_up` is used for the start of the function and `mach_sniff.rocketbootstrap_look_up_end` for the end. The first will analyze the parameter and initiate the state. Then the latter will close the state and report the mapping to the user and follow on functions (i.e. sniffing on the messages).
 
 
 
