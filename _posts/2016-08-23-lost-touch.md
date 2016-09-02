@@ -29,15 +29,15 @@ The problem we are trying solve is the mystery of why touch events have been dis
 The messages that sent to a port by name `kr.iolate.simulatetouch`. These messages are very simple this following structure:
 
 ```C
-	typedef enum {  // sent as part of the 'type' field below
-	    STTouchMove = 0,
-	    STTouchDown,
-	    STTouchUp,
+    typedef enum {  // sent as part of the 'type' field below
+        STTouchMove = 0,
+        STTouchDown,
+        STTouchUp,
 
-	    // For these types, (int)point_x denotes button type
-	    STButtonUp,
-	    STButtonDown
-	} STTouchType;
+        // For these types, (int)point_x denotes button type
+        STButtonUp,
+        STButtonDown
+    } STTouchType;
     
     typedef struct {
         int type;       // STTouchType values (Up, down, move, etc)
@@ -49,5 +49,65 @@ The messages that sent to a port by name `kr.iolate.simulatetouch`. These messag
 
 Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to send a message returns with a response. The response for each of the client's request will be an integer which gives the path index. The path index is used to identify one continues touch sequence. For example, if I request a touch down, I will get an ID. Then I will use this ID to issue a touch up which could be at a different location. The size of the response message is four bytes.
 
+The message processing pattern is very simple:
+
+```C
+static CFDataRef messageCallBack(CFMessagePortRef local, SInt32 msgid, 
+                                 CFDataRef cfData, void *info)
+{
+   ...
+   int pathIndex = touch->index;
+   
+   if (pathIndex == 0) {
+        pathIndex = getExtraIndexNumber();
+   }
+   
+   SimulateTouchEvent(port, pathIndex, touch->type, POINT(touch));
+   
+   ...             
+   
+   return (CFDataRef)[[NSData alloc] initWithBytes:&pathIndex 
+                                     length:sizeof(pathIndex)];
+   
+   ...
+}
+
+...
+
+CFMessagePortRef local = CFMessagePortCreateLocal(NULL, CFSTR(MACH_PORT_NAME), 
+                                                  messageCallBack, NULL, NULL);
+
+...
+
+CFRunLoopSourceRef source = CFMessagePortCreateRunLoopSource(NULL, local, 0);
+CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopDefaultMode);
+
+...
+```
+
+The server which is a library that is injected into `backboardd` will start a local port and make it available by name. Then it will use the CF abstraction to specify a callback function for every message it receives. Once a messege is received, it will trigger the event, allocate a path index and return that number to the client. The client will be blocked until the message is returned. Quite a simple and common pattern for processing messages.
+
+### Tangent: The bug
+While analysing this code, I noticed that there is a bug in the path index allocation procedure. `getExtraIndexNumber` function works in a funny way. 
+
+```C
+static int getExtraIndexNumber()
+{
+    int r = arc4random()%14;
+    r += 1; //except 0
+    
+    NSString* pin = Int2String(r);
+    
+    if ([[STTouches allKeys] containsObject:pin]) {
+        return getExtraIndexNumber();
+    }else{
+        return r;
+    }
+}
+```
+
+The function will get a random number between zero and thirteen, inclusive. If that path was already allocated, it will attempt to get another number, randomly (!), again by calling itself recursively. Who does that?!
+
+Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device -- if that code is malicious, you've got bigger problems to deal with.
 -----
 
