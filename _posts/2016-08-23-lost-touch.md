@@ -29,27 +29,27 @@ The problem we are trying solve is the mystery of why touch events have been dis
 The messages that sent to a port by name `kr.iolate.simulatetouch`. These messages are very simple this following structure:
 
 ```C
-    typedef enum {  // sent as part of the 'type' field below
-        STTouchMove = 0,
-        STTouchDown,
-        STTouchUp,
+typedef enum {  // sent as part of the 'type' field below
+    STTouchMove = 0,
+    STTouchDown,
+    STTouchUp,
 
-        // For these types, (int)point_x denotes button type
-        STButtonUp,
-        STButtonDown
-    } STTouchType;
-    
-    typedef struct {
-        int type;       // STTouchType values (Up, down, move, etc)
-        int index;      // pathIndex holder in message
-        float point_x;  // X coordinate
-        float point_y;  // Y coordinate
-    } STEvent;
+    // For these types, (int)point_x denotes button type
+    STButtonUp,
+    STButtonDown
+} STTouchType;
+
+typedef struct {
+    int type;       // STTouchType values (Up, down, move, etc)
+    int index;      // pathIndex holder in message
+    float point_x;  // X coordinate
+    float point_y;  // Y coordinate
+} STEvent;
 ```
 
 Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to send a message returns with a response. The response for each of the client's request will be an integer which gives the path index. The path index is used to identify one continues touch sequence. For example, if I request a touch down, I will get an ID. Then I will use this ID to issue a touch up which could be at a different location. The size of the response message is four bytes.
 
-The message processing pattern is very simple:
+The message processing pattern is very simple, [SimulateTouch.mm](https://github.com/iolate/SimulateTouch/blob/master/SimulateTouch.mm):
 
 ```C
 static CFDataRef messageCallBack(CFMessagePortRef local, 
@@ -114,6 +114,59 @@ static int getExtraIndexNumber()
 The function will get a random number between zero and thirteen, inclusive. If that path was already allocated, it will attempt to get another number, randomly (!), again by calling itself recursively. Who does that?!
 
 Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device -- if that code is malicious, you've got bigger problems to deal with.
+
+### Finding the port
+Moving on! The first thing we need to do is find the port number. Why do we need this number? Apps will usually use many ports. Particularly GUI libraries are heavy users. So, knowing the port number isolates your collection to the messages you're interested in. Also, everytime the App runs, port numbers will be different. Even though the name remains the same, when the ports are created, the numbers are allocated dynamically. So, we need to know the mapping at runtime.
+
+I prefer minimally intrusive methods of introspection. For that reason I've chosen to use LLDB. Setting up a debugging session on a JailBroken iPhone is not trivial. However, I will leave it as an exercise to the reader to follow the setup instruction from the [iPhoneWiki](http://iphonedevwiki.net/index.php/Debugserver).
+
+[LLDB](http://lldb.llvm.org/) is a really great debugger. One of my favourite features is its Python API interface. Using this interface we are able to script the debugger to automatically process memory in the context of a break point. Essentially, conveniently automating the manual work of analysing function inputs and output.
+
+To find out name to port number mapping, we'll break point on the look up functions. There are three functions: `bootstrap_look_up` which is a wrapper for `bootstrap_look_up2`. There is also `bootstrap_look_up3` which looks to be a private function, but used by several libraries. So, we will try to break on the latter two.
+
+```Python
+    # break on bootstrap_look_up2 start
+    bs_look2 = target.BreakpointCreateByName('bootstrap_look_up2', 'libxpc.dylib')
+    bs_look2.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up')
+
+    # find the end of the function
+    for bp in bs_look2:
+        insts = target.ReadInstructions(bp.GetAddress(), 100)
+        first_ret = [i.GetAddress().GetLoadAddress(target) for i in insts if i.GetMnemonic(target) == 'ret']
+
+        # Just look for the first RET instruction
+        if(len(first_ret) > 0):
+            bs_look2_end = target.BreakpointCreateByAddress(first_ret[0])
+            bs_look2_end.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up_end')
+
+            print bs_look2_end
+```
+
+We don't need to break on `bootstrap_look_up` because `bootstrap_look_up2` in enough.
+
+```Python
+    # set on rocket if available, otherwise regular crashes.
+    bs_look3 = target.BreakpointCreateByName('rocketbootstrap_look_up', 'librocketbootstrap.dylib')
+    if(not bs_look3.IsValid()):
+        bs_look3 = target.BreakpointCreateByName('bootstrap_look_up3', 'libxpc.dylib')
+
+    bs_look3.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up')
+
+    # look for the end of function
+    for bp in bs_look3:
+        insts = target.ReadInstructions(bp.GetAddress(), 200)
+        first_ret = [i.GetAddress().GetLoadAddress(target) for i in insts if i.GetMnemonic(target) == 'ret']
+
+        if(len(first_ret) > 0):
+            bs_look3_end = target.BreakpointCreateByAddress(first_ret[0])
+            bs_look3_end.SetScriptCallbackFunction('mach_sniff.rocketbootstrap_look_up_end')
+
+            print bs_look3_end
+```
+
+We also want to break on `bootstrap_look_up3`, however something about how breakpoints work and how [`librocket_bootstrap`](http://iphonedevwiki.net/index.php/RocketBootstrap) hooks the function clashes with catastrophic results. So, to handle this usecase we just support breaking on the rocket_bootstrap version which is `rocketbootstrap_look_up`.
+
+In both case we set a handler function that will analyze the function parameters to extract the name and match with the user specified name.
 
 
 
