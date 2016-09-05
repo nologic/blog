@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Some folks lost their touch
-draft: true
+draft: false
 ---
 
 In an earlier post, I introduced CHAOTICMARCH - simple tool for simulating a user's interaction with an App for blackbox testing. The tool worked well and has helped me a lot with testing. However, all was not well. Every now and then, too often for my comfort, the tool's requests for touch were getting ignored. For example, CHAOTICMARCH would find a button and try to click it. The event would get logged and the little circle would show up on the screen. However, the App would ignore the request as if nothing happened. This become very frustrating to me and I was determined to find the root cause. Investigating this behavior took me down a deep rabbit hole. To find my way out, I built LLDB scripts, learned about iOS IPC and read lots of code. With this post, I would like to share my insights, lessons and scripts.
