@@ -8,9 +8,13 @@ In an earlier post, I introduced CHAOTICMARCH - simple tool for simulating a use
 
 ## TL;DR;
 
-iPhones are relatively small devices and, to provide a smooth user experience, Apple has to be really careful with task scheduling. Prioritized task queues are used for this. The queueing system is nicely explained in the [Run, RunLoop, Run](http://bou.io/RunRunLoopRun.html) blog post. I had this missing touch problem to solve, I've done a lot of debugging only to realize that the events were being ignored because the device was busy animating the fading circles. I use those circles to show where the clicks have occurred.
+iPhones are relatively small devices and, to provide a smooth user experience, Apple has to be really careful with task scheduling. Prioritized task queues are used for this. The queuing system is nicely explained in the [Run, RunLoop, Run](http://bou.io/RunRunLoopRun.html) blog post by Nicolas Bouilleaud. 
+
+I had this missing touch problem to solve. After doing a lot of debugging and scripting, I eventually realize that the events were being ignored because the device was busy animating the fading circles. These circles are used by CHAOTICMARCH to show where the clicks have occurred. This theory was was validated by reordering drawing and clicking events.
 
 In the process of analyzing and debugging, I built a sniffer for mach ports [1]. Then I found a mild bug in the simulate touch library that could be used to crash `backboardd` which will cause `SpringBoard` to restart.
+
+The rest of this write up is about how I collected the mach messages and analyzed to confirm that the IPC mechanism is working as expected.
 
 ## Where is the touch?
 It's important to note that the quick solution mentioned in TL;DR; was very not obvious to me. So, the first thing I did was to start reversing the `libsimulatetouch` library. My hope was that the more I learn about the library internals the more I will understand its properties. The source is in the [iolate/SimulateTouch](https://github.com/iolate/SimulateTouch) repository.
