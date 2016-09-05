@@ -120,13 +120,13 @@ The function will get a random number between zero and thirteen, inclusive. If t
 Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device with the simulate touch library installed -- if that code is malicious, you've got bigger problems to deal with then some crashed GUI service.
 
 ### Finding the port
-Moving on! The first thing we need to do is find the port number. Why do we need this number? Apps will usually use many ports. Particularly GUI libraries are heavy users. So, knowing the port number isolates your collection to the messages you're interested in. Also, everytime the App runs, port numbers will be different. Even though the name remains the same, when the ports are created, the numbers are allocated dynamically. So, we need to know the mapping at runtime.
+Moving on! The first thing we need to do is find the port number. Why do we need this number? Apps will usually use many ports. Particularly, GUI libraries are heavy users. So, knowing the port number isolates your collection to the messages you're interested in. Also, every time the App runs, port numbers will be different. Even though the name remains the same, when the ports are created, the numbers are allocated dynamically. So, we need to know the mapping at runtime.
 
-I prefer minimally intrusive methods of introspection. For that reason I've chosen to use LLDB. Setting up a debugging session on a JailBroken iPhone is not trivial. However, I will leave it as an exercise to the reader to follow the setup instruction from the [iPhoneWiki](http://iphonedevwiki.net/index.php/Debugserver).
+I prefer minimally intrusive methods of introspection. For that reason I've chosen to use LLDB. Setting up a debugging session on a JailBroken iPhone is not trivial. However, I will leave it as an exercise to the reader to follow the setup instructions found on the [iPhoneWiki](http://iphonedevwiki.net/index.php/Debugserver).
 
-[LLDB](http://lldb.llvm.org/) is a really great debugger. One of my favourite features is its Python API interface. Using this interface we are able to script the debugger to automatically process memory in the context of a break point. Essentially, conveniently automating the manual work of analysing function inputs and output.
+[LLDB](http://lldb.llvm.org/) is a really great debugger. One of my favorite features is its Python API interface. Using this interface we are able to script the debugger to automatically process memory in the context of a breakpoint. Essentially, LLBD conveniently provides a method for automating the manual work of analyzing function inputs and outputs.
 
-To find out name to port number mapping, we'll break point on the look up functions. There are three functions: `bootstrap_look_up` which is a wrapper for `bootstrap_look_up2`. There is also `bootstrap_look_up3` which looks to be a private function, but used by several libraries. So, we will try to break on the latter two.
+To find out the name to port number mapping, we'll set a breakpoint on the look up functions. There are three functions: `bootstrap_look_up` which is a wrapper for `bootstrap_look_up2`. There is also `bootstrap_look_up3` which looks to be a private function, but used by several libraries. So, we will try to break on the latter two.
 
 ```Python
 # break on bootstrap_look_up2 start
@@ -151,7 +151,7 @@ for bp in bs_look2:
         print bs_look2_end
 ```
 
-We don't need to break on `bootstrap_look_up` because `bootstrap_look_up2` is enough, the former is a wrapper for the latter.
+We don't need to break on `bootstrap_look_up` because `bootstrap_look_up2` is enough, the former is a wrapper for the latter. You can see the source code for those functions on [Apple Open Source](http://opensource.apple.com//source/launchd/launchd-328/launchd/src/libbootstrap.c).
 
 ```Python
 # set on rocket if available, otherwise regular crashes.
@@ -179,11 +179,11 @@ for bp in bs_look3:
         print bs_look3_end
 ```
 
-We also want to break on `bootstrap_look_up3`, however something about how breakpoints work and how [`librocket_bootstrap`](https://github.com/rpetrich/RocketBootstrap) hooks the function clashes with catastrophic results. So, to handle this usecase we just support breaking on the rocket_bootstrap version which is `rocketbootstrap_look_up`.
+We also want to break on `bootstrap_look_up3`, however something about how breakpoints work and how [`librocket_bootstrap`](https://github.com/rpetrich/RocketBootstrap) hooks the function clashes with catastrophic results. So, to handle this use case we just support breaking on the rocket_bootstrap version which is `rocketbootstrap_look_up`.
 
-In both case we set a handler function that will analyze the function parameters to extract the name and match with the user specified name. `mach_sniff.rocketbootstrap_look_up` is used for the start of the function and `mach_sniff.rocketbootstrap_look_up_end` for the end. The first will analyze the parameter and initiate the state. Then the latter will close the state and report the mapping to the user and follow on functions (i.e. sniffing on the messages).
+In both cases we set a handler function that will analyze the function parameters to extract the name and look for the user specified port name. `mach_sniff.rocketbootstrap_look_up` is used for the start of the function and `mach_sniff.rocketbootstrap_look_up_end` for the end. The first will analyze the parameters and initiate the state. Then the second function will close the state and report the mapping to the user and follow on functions (i.e. sniffing on the messages).
 
-Once the breakpoint for function begins and ends are set, it becomes pretty easy to track port numbers and names. When the look up is first called, registers `X1` and `X2` point to the name and the return value respectively. So, all we have to do is save off those values. We create a state at the state of the function and look it up at the end of the function to create the mapping.
+Once the breakpoints for the look up function begins and ends are set, it becomes pretty easy to track port numbers and names. When the look up is first called, registers `X1` and `X2` point to the name and the return buffer, respectively. So, all we have to do is save off those values. We create a state at the start of the function and look it up at the end of the function to create the mapping.
 
 ```Python
 look_up_states = {}
