@@ -27,10 +27,10 @@ Apple IPC](https://thecyberwire.com/events/docs/IanBeer_JSS_Slides.pdf) talk.
 Last thing about these mach messages. Services like the touch server will start listing ports which clients could look up via [bootstrap_lookup](http://opensource.apple.com//source/launchd/launchd-328/launchd/src/libbootstrap.c) function calls. They work similar to DNS where the client specifies a name and receives a numeric port value. The touch library specifically uses the `CFMessagePort` abstraction for IPC which is explained very nicely in the [Interprocess communication on iOS with Mach messages](http://ddeville.me/2015/02/interprocess-communication-on-ios-with-mach-messages) blog post by Damien DeVille. The libsimulatetouch client library uses the `CFMessagePortSendRequest` function to send messages to the server side.
 
 ## Sniffing the IPC
-The problem we are trying solve is the mystery of why touch events have been disappearing. My first intuition was that perhaps these port messages were not getting to the server for some reason. So, I've decided to sniff them in the same way that I would with network traffic. After much googling, I found almost nothing for sniffing mach messages except for an old blog about [mach_shark](http://blog.wuntee.sexy/CVE-2015-3795) which unfortunately was not released (and, on the last check the blog site was down -- here's a [web archive link](http://web.archive.org/web/20160413172707/http://blog.wuntee.sexy/CVE-2015-3795/)).
+The problem we are trying solve is the mystery of why touch events have been disappearing. My first intuition was that perhaps these port messages were not getting to the server for some reason. Probably not because the kernel was messing up. But, likely because either the client wasn't sending the messages or the server wasn't processing them. So, I've decided to sniff the messages in the same way that I would with network traffic. After much googling, I found almost nothing for sniffing mach messages except for an old blog post about [mach_shark](http://blog.wuntee.sexy/CVE-2015-3795) which unfortunately was not released (and, on the last check the blog site was down -- here's a [web archive link](http://web.archive.org/web/20160413172707/http://blog.wuntee.sexy/CVE-2015-3795/)).
 
 ### What are we looking for?
-The messages that sent to a port by name `kr.iolate.simulatetouch`. These messages are very simple this following structure:
+What I'm looking for are the the messages that are sent to a port by name `kr.iolate.simulatetouch`. These messages have the following structure:
 
 ```C
 typedef enum {  // sent as part of the 'type' field below
@@ -51,7 +51,7 @@ typedef struct {
 } STEvent;
 ```
 
-Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to send a message returns with a response. The response for each of the client's request will be an integer which gives the path index. The path index is used to identify one continues touch sequence. For example, if I request a touch down, I will get an ID. Then I will use this ID to issue a touch up which could be at a different location. The size of the response message is four bytes.
+Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to send a message returns with a response. The response for each of the client's request will be an integer which gives the path index. The path index is used to identify one continuous touch sequence. For example, if I request a touch DOWN, I will get an ID. Then I will use this ID to issue a touch UP which could be at a different location. The size of the response message is four bytes. The path index in necessary to support multi-finger capability i.e. a punch zoom.
 
 The message processing pattern is very simple, [SimulateTouch.mm](https://github.com/iolate/SimulateTouch/blob/master/SimulateTouch.mm):
 
@@ -94,10 +94,10 @@ CFRunLoopAddSource(CFRunLoopGetCurrent(),
 ...
 ```
 
-The server which is a library that is injected into `backboardd` will start a local port and make it available by name. Then it will use the CF abstraction to specify a callback function for every message it receives. Once a messege is received, it will trigger the event, allocate a path index and return that number to the client. The client will be blocked until the message is returned. Quite a simple and common pattern for processing messages.
+The server which is a library that is injected into `backboardd` will start a local port and register a name to the port. Then it will use the CF abstraction to specify a callback function for the messages it receives. Once a message is received, the server will trigger the event then it will allocate a path index and return that number to the client. The client will be blocked until the message is returned. Quite a simple and common pattern for processing messages.
 
 ### Tangent: The bug
-While analysing this code, I noticed that there is a bug in the path index allocation procedure. `getExtraIndexNumber` function works in a funny way. 
+Let's go on a little tangent. While analyzing this code, I noticed that there is a bug in the path index allocation procedure. `getExtraIndexNumber` function works in a funny way. 
 
 ```C
 static int getExtraIndexNumber()
@@ -115,9 +115,9 @@ static int getExtraIndexNumber()
 }
 ```
 
-The function will get a random number between zero and thirteen, inclusive. If that path was already allocated, it will attempt to get another number, randomly (!), again by calling itself recursively. Who does that?!
+The function will get a random number between zero and thirteen, inclusive. If that path was already allocated, the function will attempt to get another number, randomly (!), by calling itself recursively. Who does that?! Maybe, this is just some remnants of old code.
 
-Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device -- if that code is malicious, you've got bigger problems to deal with.
+Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device with the simulate touch library installed -- if that code is malicious, you've got bigger problems to deal with then some crashed GUI service.
 
 ### Finding the port
 Moving on! The first thing we need to do is find the port number. Why do we need this number? Apps will usually use many ports. Particularly GUI libraries are heavy users. So, knowing the port number isolates your collection to the messages you're interested in. Also, everytime the App runs, port numbers will be different. Even though the name remains the same, when the ports are created, the numbers are allocated dynamically. So, we need to know the mapping at runtime.
