@@ -237,12 +237,12 @@ def rocketbootstrap_look_up_end(frame, bp_loc, dict):
         print "end with no state"
 ```
 
-Once we find the port name and number we are interested in, we initiate the sniffing mechanisms. Keeping the port number finding and sniffing of the messages is nice because it allows the user to potentially sniff on just a port number rather than name.
+Once we find the port name and number we are interested in, we initiate the sniffing mechanisms. Keeping the port number finding and sniffing of the messages separate is nice because it allows the user to potentially sniff on just a port number rather than by name - especially in the case where we miss the look up calls before the debugger is attached.
 
 ### Sniffing the mach messages
-To find the messages we are interested in is the same basic process as finding ports. Initially, I wanted to get all the messages and then do post processing to filter out only the ones I'm interested in. However, breakpoints are expensive and the App would run beyond slow. So, it became necessary to only sniff on the ports of interest.
+To find the messages of interest is the same basic process as finding ports - we just need the port number. Initially, I wanted to get all the messages and then do post processing to filter out only the ones I'm interested in. However, breakpoints are expensive and the App would run beyond slow! So, it became necessary to only sniff on the ports of interest.
 
-To be selective on the port we have to specify a breakpoint condition. This condition will chech that register `X0` contains our port number. Doing this is still expensive but it sped things up to a reasonable threshold.
+To be selective on the port we have to specify a breakpoint condition. This condition will check that register `X0` contains our port number. Doing this is still expensive but it sped things up to a reasonable threshold.
 
 ```Python
 def start_sniff_port(debugger, port_number):
@@ -255,7 +255,7 @@ def start_sniff_port(debugger, port_number):
     msg_bp.SetCondition("*(uint32_t*)($x0 + 8) == %d" % port_number)
 ```
 
-Our breakpoint is set on the `mach_msg` function in `libsystem_kernel.dylib` library. This function is a wrapper for the actual system call.
+Our breakpoint is set on the `mach_msg` function in the `libsystem_kernel.dylib` library. This function is a wrapper for the actual system call. Although, it does a little more than just pass through the parameters.
 
 ```Python
 def print_mach_msg(frame, bp_loc, dict):
@@ -297,9 +297,9 @@ def print_mach_msg(frame, bp_loc, dict):
     print output
 ```
 
-On each message send for our port of interest we collect information from the registers and record the data into a while for later processing. In this case we just take the buffer at `X0` and read the amount of bytes specified in `X2` which is the length of the buffer. Other data is recorded as well but we'll find its usefulness sometime later.
+On each message send call for our port of interest we collect information from the registers and record the data into a file for later processing. In this case we just take the buffer at `X0` and read the amount of bytes specified in `X2` which is the length of the buffer. Other data is recorded as well but we'll find its usefulness sometime later.
 
-Each entry in the output file will look like this:
+Each entry of the output file will look like this:
 
 ```JSON
 {"frame": "frame #0: 0x0000000197054c40 
@@ -320,7 +320,7 @@ Each entry in the output file will look like this:
  "type": "msg_send_start"}
 ```
 
-In essence each line is a JSON record of the arguments `mach_msg` was called with. Kind of like `strace`.
+In essence each line is a JSON record of the arguments to the `mach_msg` function. Kind of like `strace`.
 
 ## Making sense of it all
 Recording the messages is just the first step. We also need to be able to understand them. Not surprisingly, they are layered in a similar way as network protocols. This is due to the various abstractions available to carry out IPC mechanisms. As I mentioned earlier, the usecase of the `libsimulatetouch` uses CF for their abstraction.
