@@ -179,6 +179,97 @@ We also want to break on `bootstrap_look_up3`, however something about how break
 
 In both case we set a handler function that will analyze the function parameters to extract the name and match with the user specified name. `mach_sniff.rocketbootstrap_look_up` is used for the start of the function and `mach_sniff.rocketbootstrap_look_up_end` for the end. The first will analyze the parameter and initiate the state. Then the latter will close the state and report the mapping to the user and follow on functions (i.e. sniffing on the messages).
 
+Once the breakpoint for function begins and ends are set, it becomes pretty easy to track port numbers and names. When the look up is first called, registers `X1` and `X2` point to the name and the return value respectively. So, all we have to do is save off those values. We create a state at the state of the function and look it up at the end of the function to create the mapping.
+
+```Python
+look_up_states = {}
+
+def rocketbootstrap_look_up(frame, bp_loc, dict):
+    tid = thread.GetThreadID()
+
+    # name of port to be looked up
+    x1_name = long(registers[0].GetChildAtIndex(1).GetValue(), 16)
+
+    # destination of the port number
+    x2_ret_addr = long(registers[0].GetChildAtIndex(2).GetValue(), 16)
+
+    error = lldb.SBError()
+    port = process.ReadCStringFromMemory(x1_name, 256, error)
+    if error.Success():
+        if(port == port_name):
+            # create state if it's the port we are looking for
+            look_up_states[tid].append({
+                'port': port,
+                'ret_addr': x2_ret_addr
+            })
+    else:
+        print 'port name error: ', error
+```
+
+At the end of the function we look up the state information by thread ID and match up the name with the port number.
+
+```Python
+def rocketbootstrap_look_up_end(frame, bp_loc, dict):
+    tid = thread.GetThreadID()
+    
+    # logically confirms that the name matched to the port we want to sniff
+    if(tid in look_up_states):
+        state = look_up_states[tid].pop()
+
+        error = lldb.SBError()
+
+        # read port number from the return buffer
+        port_id = process.ReadUnsignedFromMemory(state['ret_addr'], 4, error)
+
+        if error.Success():
+            print "FOUND PORT: %s=%x" % (state['port'], port_id)
+
+            # start sniffing for messages on this port.
+            if(len(look_up_states[tid]) == 0):
+                start_sniff_port(debugger, port_id)
+        else:
+            print 'port id error: ', error
+    else:
+        print "end with no state"
+```
+
+Once we find the port name and number we are interested in, we initiate the sniffing mechanisms. Keeping the port number finding and sniffing of the messages is nice because it allows the user to potentially sniff on just a port number rather than name.
+
+### Sniffing the mach messages
+
+
+```Python
+def start_sniff_port(debugger, port_number):
+    target = debugger.GetSelectedTarget()
+
+    msg_bp = target.BreakpointCreateByName('mach_msg', 
+                                 'libsystem_kernel.dylib')
+
+    msg_bp.SetScriptCallbackFunction('mach_sniff.print_mach_msg')
+    msg_bp.SetCondition("*(uint32_t*)($x0 + 8) == %d" % port_number)
+```
+
+
+```JSON
+{ '_payload': [ { 'ool_address': '0x0',
+                  'ool_bytes': '0000000000000000',
+                  'ool_copy': 0,
+                  'ool_deallocate': 0,
+                  'ool_pad1': 0,
+                  'ool_size': '0x0',
+                  'ool_type': 0},
+                { 'inards_byteslen': '0x10',
+                  'inards_convid': '0x12',
+                  'inards_magic': '0xf0f2f4f8',
+                  'inards_msgid': '0x1'},
+                { 'index': 6, 'point_x': 312.5, 'point_y': 551.5, 'type': 2}],
+  'msgh_bits': 5395,
+  'msgh_id': 1,
+  'msgh_local_port': '0xc20b',
+  'msgh_remote_port': '0x6c1b',
+  'msgh_reserved': 0,
+  'msgh_size': 76}
+```
 
 
 -----
