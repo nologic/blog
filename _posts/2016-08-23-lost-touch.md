@@ -10,7 +10,7 @@ In an earlier post, I introduced [CHAOTICMARCH](http://debugtrap.com/2016/03/26/
 
 iPhones are relatively small devices and, to provide a smooth user experience, Apple has to be really careful with task scheduling. Prioritized task queues are used for this. The queuing system is nicely explained in the [Run, RunLoop, Run](http://bou.io/RunRunLoopRun.html) blog post by Nicolas Bouilleaud. 
 
-I had this missing touch problem to solve. After doing a lot of debugging and scripting, I eventually realize that the events were being ignored because the device was busy animating the fading circles. These circles are used by CHAOTICMARCH to show where the clicks have occurred. This theory was was validated by reordering drawing and clicking events.
+I had this missing touch problem to solve. After doing a lot of debugging and scripting, I eventually realized that the events were being ignored because the device was busy animating the fading circles. These circles are used by CHAOTICMARCH to show where the clicks have occurred. This theory was validated by reordering drawing and clicking events.
 
 In the process of analyzing and debugging, I built a sniffer for mach ports [1]. Then I found a mild bug in the simulate touch library that could be used to crash `backboardd` which will cause `SpringBoard` to restart.
 
