@@ -295,6 +295,29 @@ def print_mach_msg(frame, bp_loc, dict):
 
 On each message send for our port of interest we collect information from the registers and record the data into a while for later processing. In this case we just take the buffer at `X0` and read the amount of bytes specified in `X2` which is the length of the buffer. Other data is recorded as well but we'll find its usefulness sometime later.
 
+Each entry in the output file will look like this:
+
+```JSON
+{"frame": "frame #0: 0x0000000197054c40 libsystem_kernel.dylib`mach_msg", 
+ "tid": 135127, 
+ "notify": 0, 
+ "msg_options": "0x0000000000000011", 
+ "rcv_name": 0, 
+ "recv_msg_size": 0, 
+ "send_msg_size": 76, 
+ "timeout": 1000, 
+ "time": 1471562568339, 
+ "msg": "131500004c0000001b6c00000bc20000000
+         00000010000000000000000000000000000
+         000000000000000000f8f4f2f0010000000
+         10000001000000001000000000000000080
+         2f430000f041", 
+ "type": "msg_send_start"}
+```
+
+In essence each like is a JSON record of the information `mach_msg` was called with. Kind of like `strace`.
+
+## Making sense of it all
 
 ```JSON
 { '_payload': [ { 'ool_address': '0x0',
