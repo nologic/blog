@@ -17,7 +17,7 @@ In the process of analyzing and debugging, I built a sniffer for mach ports [1].
 The rest of this write up is about how I collected the mach messages and analyzed to confirm that the IPC mechanism is working as expected.
 
 ## Where is the touch?
-It's important to note that the quick solution mentioned in TL;DR; was very not obvious initially. So, the first thing I did was to start reversing the `libsimulatetouch` library. My hope was that the more I learn about the library internals the more I will understand its properties. The source is in the [iolate/SimulateTouch](https://github.com/iolate/SimulateTouch) repository.
+It's important to note that the quick solution mentioned in TL;DR; was not obvious initially. So, the first thing I did was to start reversing the `libsimulatetouch` library. My hope was that the more I learn about the library internals the more I will understand its properties. The source is in the [iolate/SimulateTouch](https://github.com/iolate/SimulateTouch) repository.
 
 There is a "client" side, which is the application that wants to trigger an event - such as `/sbin/stouch`, and there is the "server" side. The server side is the injected DYLIB within the `backboardd` process that actually generates the HID events on behalf of the client. The client library is the `libsimulatetouch.dylib` - implemented by [STLibrary.mm](https://github.com/iolate/SimulateTouch/blob/master/STLibrary.mm) and the server is `SimulateTouch.dylib` mobile substrate library - implemented by [SimulateTouch.mm](https://github.com/iolate/SimulateTouch/blob/master/SimulateTouch.mm).
 
@@ -51,7 +51,7 @@ typedef struct {
 } STEvent;
 ```
 
-Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to send a message returns with a response. The response for each of the client's request will be an integer which gives the path index. The path index is used to identify one continuous touch sequence. For example, if I request a touch DOWN, I will get an ID. Then I will use this ID to issue a touch UP which could be at a different location. The size of the response message is four bytes. The path index in necessary to support multi-finger capability i.e. a punch zoom.
+Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to send a message returns with a response. The response for each of the client's request will be an integer which gives the path index. The path index is used to identify one continuous touch sequence. For example, if I request a touch DOWN, I will get an ID. Then I will use this ID to issue a touch UP which could be at a different location. The size of the response message is four bytes. The path index in necessary to support multi-finger capability i.e. a pinch zoom.
 
 The message processing pattern is very simple, [SimulateTouch.mm](https://github.com/iolate/SimulateTouch/blob/master/SimulateTouch.mm):
 
@@ -117,7 +117,7 @@ static int getExtraIndexNumber()
 
 The function will get a random number between zero and thirteen, inclusive. If that path was already allocated, the function will attempt to get another number, randomly (!), by calling itself recursively. Who does that?! Maybe, this is just some remnants of old code.
 
-Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device with the simulate touch library installed -- if that code is malicious, you've got bigger problems to deal with then some crashed GUI service.
+Basically, this means that if I call a whole bunch of touch down events, I can allocate all fourteen paths and `getExtraIndexNumber` will be forced to run out of stack space as it looks for an unallocated path index. The impact is that `backboardd` will crash forcing `SpringBoard` to restart. I suppose you can call it a DoS attack, but the significance is so mild. In order to trigger this you'd have to be running within a process on a jailbroken device with the simulate touch library installed -- if that code is malicious, you've got bigger problems to deal with than some crashed GUI service.
 
 ### Finding the port
 Moving on! The first thing we need to do is find the port number. Why do we need this number? Apps will usually use many ports. Particularly, GUI libraries are heavy users. So, knowing the port number isolates your collection to the messages you're interested in. Also, every time the App runs, port numbers will be different. Even though the name remains the same, when the ports are created, the numbers are allocated dynamically. So, we need to know the mapping at runtime.
