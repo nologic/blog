@@ -12,7 +12,7 @@ iPhones are relatively small devices and, to provide a smooth user experience, A
 
 I had this missing touch problem to solve. After doing a lot of debugging and scripting, I eventually realized that the events were being ignored because the device was busy animating the fading circles. These circles are used by CHAOTICMARCH to show where the clicks have occurred. This theory was validated by reordering drawing and clicking events.
 
-In the process of analyzing and debugging, I built a sniffer for mach ports [1]. Then I found a mild bug in the simulate touch library that could be used to crash `backboardd` which will cause `SpringBoard` to restart.
+In the process of analyzing and debugging, I built a sniffer for mach ports - [machshark](https://github.com/nologic/machshark). Then I found a mild bug in the simulate touch library that could be used to crash `backboardd` which will cause `SpringBoard` to restart.
 
 The rest of this write up is about how I collected the mach messages and analyzed to confirm that the IPC mechanism is working as expected.
 
@@ -406,4 +406,4 @@ Debugging is a bit of an art form which can send you down very deep and sometime
 Debugging is an art form because one cannot see everything they want to see and the tools used for inspection are themselves faulty. So, it takes experience and good intuition to know what to look for and how to interpret the view. Much of the process is just validating the data flow, reassuring yourself that parts are working correctly. It is the hope that in that process one can learn more about the target which will help to narrow down on the problem. Here, I show my process for a specific use case and provide the tools to build upon or learn from.
 
 -----
-[1] [machshark](https://github.com/nologic/machshark) - sniffing and parsing tools.
+
