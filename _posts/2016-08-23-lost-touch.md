@@ -55,7 +55,7 @@ Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to
 
 The message processing pattern is very simple, [SimulateTouch.mm](https://github.com/iolate/SimulateTouch/blob/master/SimulateTouch.mm):
 
-```Objective-C
+```objective_c
 static CFDataRef messageCallBack(CFMessagePortRef local, 
                                  SInt32 msgid, 
                                  CFDataRef cfData, 
@@ -128,7 +128,7 @@ I prefer minimally intrusive methods of introspection. For that reason I've chos
 
 To find out the name to port number mapping, we'll set a breakpoint on the look up functions. There are three functions: `bootstrap_look_up` which is a wrapper for `bootstrap_look_up2`. There is also `bootstrap_look_up3` which looks to be a private function, but used by several libraries. So, we will try to break on the latter two.
 
-``` Python
+``` python
 # break on bootstrap_look_up2 start
 bs_look2 = target.BreakpointCreateByName('bootstrap_look_up2', 
                         'libxpc.dylib')
@@ -153,7 +153,7 @@ for bp in bs_look2:
 
 We don't need to break on `bootstrap_look_up` because `bootstrap_look_up2` is enough, the former is a wrapper for the latter. You can see the source code for those functions on [Apple Open Source](http://opensource.apple.com//source/launchd/launchd-328/launchd/src/libbootstrap.c).
 
-```Python
+``` python
 # set on rocket if available, otherwise regular crashes.
 bs_look3 = target.BreakpointCreateByName('rocketbootstrap_look_up', 
                         'librocketbootstrap.dylib')
