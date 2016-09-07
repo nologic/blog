@@ -55,7 +55,7 @@ Super simple messages! Just 16 bytes long. As we mentioned earlier, each call to
 
 The message processing pattern is very simple, [SimulateTouch.mm](https://github.com/iolate/SimulateTouch/blob/master/SimulateTouch.mm):
 
-```C
+```Objective-C
 static CFDataRef messageCallBack(CFMessagePortRef local, 
                                  SInt32 msgid, 
                                  CFDataRef cfData, 
@@ -99,7 +99,7 @@ The server which is a library that is injected into `backboardd` will start a lo
 ### Tangent: The bug
 Let's go on a little tangent. While analyzing this code, I noticed that there is a bug in the path index allocation procedure. `getExtraIndexNumber` function works in a funny way. 
 
-```C
+```Objective-C
 static int getExtraIndexNumber()
 {
     int r = arc4random()%14;
