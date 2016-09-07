@@ -101,13 +101,10 @@ text:
   og_locale: 'en_US'
 
 # Build settings
-markdown:     kramdown
+markdown: kramdown
 kramdown:
   input: GFM
   syntax_highlighter: rouge
-highlighter: Rouge
-syntax-highlighting:
-  enabled : true
 redcarpet:
   extensions: ['smart', 'tables', 'with_toc_data']
 permalink:    pretty
