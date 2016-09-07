@@ -105,9 +105,9 @@ markdown:     kramdown
 kramdown:
   input: GFM
   syntax_highlighter: rouge
+highlighter: Rouge
 syntax-highlighting:
   enabled : true
-highlighter: rouge
 redcarpet:
   extensions: ['smart', 'tables', 'with_toc_data']
 permalink:    pretty
