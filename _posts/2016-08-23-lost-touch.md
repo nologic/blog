@@ -128,7 +128,7 @@ I prefer minimally intrusive methods of introspection. For that reason I've chos
 
 To find out the name to port number mapping, we'll set a breakpoint on the look up functions. There are three functions: `bootstrap_look_up` which is a wrapper for `bootstrap_look_up2`. There is also `bootstrap_look_up3` which looks to be a private function, but used by several libraries. So, we will try to break on the latter two.
 
-```Python
+``` Python
 # break on bootstrap_look_up2 start
 bs_look2 = target.BreakpointCreateByName('bootstrap_look_up2', 
                         'libxpc.dylib')
