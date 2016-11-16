@@ -16,7 +16,7 @@ A while back I introduced a utility called [shellcc](https://github.com/nologic/
 
 I show this use-case in an introductory walk through:
 
-<center><iframe width="420" height="315" src="https://www.youtube.com/watch?v=yg9svg9xE8g" frameborder="0" allowfullscreen></iframe></center>
+<center><iframe width="420" height="315" src="https://www.youtube.com/embed/yg9svg9xE8g" frameborder="0" allowfullscreen></iframe></center>
 
 When I started out my work on iOS, I did not know Aarch64 assembly very well. So, I needed a boon to help me bootstrap. This was the other purpose of _shellcc_ - an educational tool. I would use it to compile basic C programs in order to understand how the assembly is written to make system calls and process data. So, the tool is kind of an 80% solution that would give me template assembly that I could later play with. It also helped me with reverse engineering. Specifically to test theories about what certain blocks from IDAPro might have looked like in a high level language.
 
