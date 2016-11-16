@@ -4,7 +4,7 @@ title: Loading from memory
 draft: true
 ---
 
-Building shell code and playing with assembly is my idea of fun. In this article I introduce shellcode that executes to download a dynamic library from a TCP connection and loads it without ever touching the disk. On MacOS, there are several methods of doing that [1], but I would like to show another alternative which possibly requires less code to implement.
+Building shellcode and playing with assembly is my idea of fun. In this article I introduce shellcode that executes to download a dynamic library from a TCP connection and loads it without ever touching the disk. On MacOS, there are several methods of doing that [1], but I would like to show another alternative which possibly requires less code to implement.
 
 ## TL;DR;
 
