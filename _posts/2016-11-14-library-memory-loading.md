@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Loading from memory
-draft: true
+draft: false
 ---
 
 Building shellcode and playing with assembly is my idea of fun. In this article I introduce shellcode that executes to download a dynamic library from a TCP connection and loads it without ever touching the disk. On MacOS, there are several methods of doing that [1], but I would like to show another alternative which possibly requires less code to implement.
@@ -20,7 +20,7 @@ I show this use-case in an introductory walk through:
 
 When I started out my work on iOS, I did not know Aarch64 assembly very well. So, I needed a boon to help me bootstrap. This was the other purpose of _shellcc_ - an educational tool. I would use it to compile basic C programs in order to understand how the assembly is written to make system calls and process data. So, the tool is kind of an 80% solution that would give me template assembly that I could later play with. It also helped me with reverse engineering. Specifically to test theories about what certain blocks from IDAPro might have looked like in a high level language.
 
-On semi-regular basis, I try to do a presentation at the NYU OSIRIS lab for educational purposes. I pick a topic that I had played with recently and found useful and present in practical detail. I wanted to do this with _shellcc_ and, so, I came up with a practial example: *How to write one of the most common shellcodes? One that connects to a TCP port, downloads a dylib and loads it into the process space.* As an added challenge, I wanted to do so without touching disk (and triggering AV's). This is what I would like to present in this blog. Of course, as I've mentioned earlier, there is more than one way.
+On semi-regular basis, I try to do presentations at the NYU OSIRIS lab for educational purposes. I pick a topic that I had played with recently and found useful and present in practical detail. I wanted to do this with _shellcc_ and, so, I came up with a practial example: *How to write one of the most common shellcodes? One that connects to a TCP port, downloads a dylib and loads it into the process space.* As an added challenge, I wanted to do so without touching disk (and triggering personal security products). This is what I would like to present in this blog. Of course, as I've mentioned earlier, there is more than one way.
 
 ## The Technique
 
@@ -76,7 +76,7 @@ Then we locate the `loadFromMemory` function or, rather, a C++ class constructor
     void* image = loadFromMemory(dyld_buffer, fileSize, NULL);
 ```
 
-The [__ZN4dyld14loadFromMemoryEPKhyPKc](https://opensource.apple.com/source/dyld/dyld-353.2.1/src/dyld.cpp) function was discovered by analyzing the dyld source code for how it loads Mach-O's into memory. This function will construct a class in memory to internally describe the layout and all the features that the system cares about.
+One day, while reading the DYLD source code, I discovered the `loadFromMemory` function which is used internally to parse a memory blob. Its mangled name is [__ZN4dyld14loadFromMemoryEPKhyPKc](https://opensource.apple.com/source/dyld/dyld-353.2.1/src/dyld.cpp) and the source preamble is below. This function constructs an `ImageLoader` class object in memory to internally describe the layout and all the features that the system cares about.
 
 ```c++
 ImageLoader* loadFromMemory(const uint8_t* mem, uint64_t len, 
@@ -97,7 +97,7 @@ Next is the easy part. This is where we force the loaded Mach-O file to join the
 ```c
     typedef void (*registerInterposing)(void* _this);
 
-    // `vtable for'ImageLoaderMachOCompressed
+    // `vtable for ImageLoaderMachOCompressed
     ((registerInterposing) (*( (*(uint8_t***)image) + 64))) (image);
 ```
 
