@@ -117,7 +117,7 @@ The `registerInterposing` is a function that is called when we inject libraries 
 Finally, we execute our library function to kick off the maliciously injected code.
 
 ## Conclusion
-Using functions `loadFromMemory` and `registerInterposing` seem simple but it was not obvious without a fairly in-depth analysis of DYLD. This method is useful when the alternatives might not be applicable.
+Using functions `loadFromMemory` and `registerInterposing` seems simple but it was not obvious without a fairly in-depth analysis of DYLD. This method is useful when the alternatives might not be applicable.
 
 
 ---
