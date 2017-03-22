@@ -29,7 +29,7 @@ By default, the device doesn’t have a password set on the admin user in the we
 
 __Figure 2:__ Login page
 
-Of course, all HTTP interactions are unsecured. There's no way of configuring TLS for Admin interface. As long as you configure WPA for your wireless network then that should be OK, right? I guess, it just depends on how much you trust the people you allow to connect to the device with you. Personally, I would've preferred to have some TLS, not like encryption takes so many resources to run for one user. This is a perfect case where I'd gave away some performance for much more security.
+Of course, all HTTP interactions are unsecured. There's no way of configuring TLS for the administrator interface. As long as you configure WPA for your wireless network then that should be OK, right? I guess, it just depends on how much you trust the people you allow to connect to the device with you. Personally, I would've preferred to have some TLS, not like encryption takes so many resources to run for one user. This is a perfect case where I'd give away some performance for much more security.
 
 Next, we connect to the device's local Wi-Fi and do a full nmap scan:
 ```
@@ -46,7 +46,7 @@ Next, we connect to the device's local Wi-Fi and do a full nmap scan:
   5880/tcp open     unknown
   8201/tcp open     trivnet2
 ```
-Some interesting things there. I always enjoy seeing 'weird' looking ports that open for business. Not quite sure what to do with them yet but I imagine they have something to do with the various services (such as samba and DLNA Services) that the device provides. I was, however, disappointed that there are no remote shell ports to be found, such as ssh or telnet. That is especially because telnet was discovered during analysis of older versions, by chorankates. I guess HooToo did some enhancements since then.
+Some interesting things there. I always enjoy seeing 'weird' looking ports that are open for business. Not quite sure what to do with them yet but I imagine they have something to do with the various services (such as samba and DLNA Services) that the device provides. I was, however, disappointed that there are no remote shell ports to be found, such as ssh or telnet. That is especially because telnet was discovered during analysis of older versions, by chorankates. I guess HooToo did some enhancements since then.
 
 # The firmware
 Next, I'd like to look at the firmware and see what kind of interesting things we could discover there. After a little bit of googling, I found that it's possible to update the device with new firmware found on the [HooToo support](http://www.hootoo.com/downloads-HT-TM06.html) page. The update process is to upload the update file via the authenticated web interface. Finding an update file like this is exciting because it means we get to peek inside the code that is executing on our device.
@@ -133,7 +133,7 @@ firmware/kernel:        u-boot legacy uImage, Linux Kernel Image, Linux/MIPS, OS
 firmware/rootfs:        Squashfs filesystem, little endian, version 4.0, 5566433 bytes, 1105 inodes, blocksize: 131072 bytes, created: Tue Feb 14 00:36:10 2017
 ```
 
-`rootfs` looks promising because it is a *Squashfs* filesystem, so this file probably lands up on the flash drive of the device. Looking at the kernel we can also get some information about when it as built and the kind of architecture we should expect. So, let's mount the filesystem and peek inside.
+`rootfs` looks promising because it is a *Squashfs* filesystem, so this file probably lands up on the flash drive of the device. Looking at the kernel we can also get some information about when it was built and the kind of architecture we should expect. So, let's mount the filesystem and peek inside.
 
 ```
 mike@ubuntu:~/blog_firmware$ tree -h --dirsfirst -L 3 --filelimit 20 ./rootfs.mount/
@@ -216,7 +216,7 @@ mike@ubuntu:~/blog_firmware$ tree -h --dirsfirst -L 3 --filelimit 20 ./rootfs.mo
 59 directories, 35 files
 ```
 
-There is nothing really that is out of the ordinary. Looks like a small, possibly custom, distribution of Linux for a MIPS embedded system. On the [support page](http://www.hootoo.com/hootoo-tripmate-ht-tm06-wireless-router.html), we see that the device's chipset is MTK 7620. With this information we can find the [datasheet](https://wiki.microduino.cc/images/3/34/MT7620_Datasheet.pdf) and the CPU instruction set manual for the [MIPS32 24K](https://people.freebsd.org/~adrian/mips/MD00343-2B-24K-SUM-03.11.pdf) Processor. This will come handy in the future.
+There is nothing that is out of the ordinary. Looks like a small, possibly custom, distribution of Linux for a MIPS embedded system. On the [support page](http://www.hootoo.com/hootoo-tripmate-ht-tm06-wireless-router.html), we see that the device's chipset is MTK 7620. With this information we can find the [datasheet](https://wiki.microduino.cc/images/3/34/MT7620_Datasheet.pdf) and the CPU instruction set manual for the [MIPS32 24K](https://people.freebsd.org/~adrian/mips/MD00343-2B-24K-SUM-03.11.pdf) Processor. This will come handy in the future.
 
 ```
 mike@ubuntu:~/$ cat ./rootfs.mount/etc/passwd
@@ -224,12 +224,12 @@ root:$1$yikWMdhq$cIUPc1dKQYHkkKkiVpM/v/:0:0:root:/root:/bin/sh
 ...
 ```
 
-It only took about two days of [_john the ripper_](http://www.openwall.com/john/) on a reasonably priced AWS instance. The password was discovered by brute force: `20080826`. What's sad is that we have no where to use this password on. There's no login shell and the root user does not work via the web interface. Also, I couldn't authenticate by directly sending the `root` login request using [burp](https://portswigger.net/burp/) - so, the username enforcement is happening on the device. This is a good sign, otherwise we'd have a nice back door that no one would likely check for.
+It only took about two days of [_john the ripper_](http://www.openwall.com/john/) on a reasonably priced AWS instance. The password was discovered by brute force: `20080826`. What's sad is that we have no where to use this password. There's no login shell and the root user does not work via the web interface. Also, I couldn't authenticate by directly sending the `root` login request using [burp](https://portswigger.net/burp/) - so, the username enforcement is happening on the device. This is a good sign, otherwise we'd have a nice back door that, likely, no one would check for.
 
 For this write up, we'll stop here with the firmware analysis. There's certainly more to do. But for now, we have all the files that we need for further specialized branches of analysis.
 
 # Getting a debugger
-So far, we've discovered some useful things about the device: the firmware, some unfixed issues and its architecture. However, nothing terrible and, as I've eluded to earlier, we really want to get some execution on the device. Ideally, we want to crack in but until then let's see if we can use semi-normal methods.
+So far, we've discovered some useful things about the device: the firmware, some unfixed issues and its architecture. However, nothing terrible and, as I've eluded to earlier, we really want to get some execution on the device. Ideally, we want to crack in, but until then let's see if we can use semi-normal methods.
 
 Looking at our analysis so far, we notice that the firmware is not signed and it is a simple shell script. So, let's build our own update! :-) Also, we notice that in the previous analysis, by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo), the earlier versions of the device had port 23 (telnet) open. So, I would guess that this functionality was disabled rather than removed.
 
@@ -265,7 +265,7 @@ My first attempt was to upload a basic shell script:
 exit 1
 ```
 
-I wanted to return an error, so that the system didn't decide to irreversibly change anything else and possibly brick the device. Unfortunately, that did not work. Obviously, I got no explanation. Further analyzing the official update package, we notice that the update usually comes with a CRC checksum. There is a check in the official firmware update that looks like this:
+I wanted to return an error, so that the system would not decide to, irreversibly, change anything internal and possibly brick the device. Unfortunately, that did not work. Obviously, I got no explanation. Further analyzing the official update package, we notice that the update usually comes with a CRC checksum. There is a check in the official firmware update that looks like this:
 
 ```bash
 crcsum=`sed '1,3d' $0|cksum|sed -e 's/ /Z/' -e 's/   /Z/'|cut -dZ -f1`
@@ -296,7 +296,7 @@ mike@ubuntu:~$ sed '1,3d' fw-7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030 \
 3587589093
 ```
 
-Worked! I still don't know what the deal is - I'm sure there is a simple explanation. It looks like the `cksum` command on Linux uses a different algorithm compared to the on OS X. Probably should have done this sooner given that the device runs a version of Linux. Lessons learned!
+Worked! I still don't know what the deal is - I'm sure there is a simple explanation. It looks like the `cksum` command on Linux uses a different algorithm compared to the one on OS X. Probably should have done this sooner given that the device runs a version of Linux. Lessons learned!
 
 With this information, I constructed another shell script with a proper CRC checksum this time:
 
@@ -318,7 +318,7 @@ CPU=7620
 exit 1
 ```
 
-Those other lines are a copy/paste by product, since the CRC was already generates I didn't want to take them out. Upon uploading this as a firmware update, the device gave me an error. However, doing a network scan, I saw that telnet was open! This means that the error was generated by the `exit 1`, rather than by incompatible firmware.
+Those other lines are a copy/paste by product. Since the CRC was already generated, I didn't want to take them out. Upon uploading this as a firmware update, the device gave me an error. However, doing a network scan, I saw that telnet was open! This means that the error was generated by the `exit 1`, rather than by incompatible firmware.
 
 ```
 $ nmap 192.168.1.1
