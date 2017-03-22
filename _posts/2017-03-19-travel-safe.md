@@ -23,7 +23,7 @@ The device is configurable via a web interface and it exposes a whole bunch of T
 
 __Figure 1:__ Login page
 
-By default, the device doesn’t have a password set on the admin user in the web interface. The user is expected to change it upon initial setup. This is not bad in itself but the device should really require the user to set the password after initial login. The WebUI itself doesn't provide a lot of rich features - it is a simple, to the point, UI. What you'll find there are some basic Wi-Fi settings, MAC spoofing, access to media storage and network configurations. Obviously, an attacker getting access to such things would be bad but not too damaging.
+By default, the device doesn’t have a password set on the admin user in the web interface. The user is expected to change it upon initial setup. This is not bad in itself but the device should really require the user to set the password after initial login. The WebUI itself doesn't provide a lot of rich features - it is a simple, to the point, UI. What you'll find there are some basic Wi-Fi settings, MAC spoofing, access to media storage and network configurations. Obviously, an attacker getting access to such things would be bad, but I wouldn't expect it to be too damaging.
 
 ![](../../../../images/hootoo_internet_page.png "Configuring the Wi-Fi Bridge")
 
