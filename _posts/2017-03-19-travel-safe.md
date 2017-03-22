@@ -386,7 +386,7 @@ Remote debugging using 192.168.1.1:9999
 Cool! We have a debugger.
 
 # Conclusion
-Secure infrastructure is important. It is important even to a digital nomad, whether they are a permanent nomad or just a temporary one. Based on research by security professionals, we've seen how hard it can be to get secure infrastructure on the go. HooToo tries to provide an additional layer of security via the Trip Mate travel router.
+Secure infrastructure is important. It is important even to a digital nomad, whether they are a permanent nomad or just a temporary one. Based on research by several security professionals, we've seen how hard it can be to get secure infrastructure on the go. HooToo tries to provide an additional layer of security via the Trip Mate travel router.
 
 In this post, we have discovered the surface area that could potentially be used for attacks. We have also seen how a researcher could gain shell access to their device by uploading fake firmware updates. Using these methods, it becomes possible to obtain the binaries that execute on the device as well as set up a dynamic analysis environment.
 
