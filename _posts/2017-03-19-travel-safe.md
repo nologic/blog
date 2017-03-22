@@ -12,26 +12,26 @@ The community of digital nomads is growing in addition to an already large numbe
 Looking for a solution, I discovered the concept of a travel router. Basically, a MiFi but without the SIM card and some additional features. A search on amazon returned well over a thousand of results - ranging in fitness to the search criteria. Taking price and function into account, I zeroed in on the HooToo TM-06 (the device). Its functions include Wi-Fi extension, Wi-Fi to Ethernet bridging and Hot Spot creation. However, security is one of the selling points: "create your own secure Wi-Fi network," they said. I took this to mean that I can create a network more secure than what I bridge to in a Café, AirBnB or a hotel. At the very least, I could have an additional layer of protection such as what I could get from a NAT or a good firewall. Naturally, I wanted to _thoroughly_ check if this security claim was true.
 
 # Previous work
-There was some initial work done on HooToo devices, including the previous versions of the TM-06, by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo). Also, [Smith](https://www.exploit-db.com/exploits/38081/) published XSRF exploits which remain unpatched. However, I wanted to see if I could get arbitrary code execution.
+There was some initial work done on HooToo devices, including the previous versions of the TM-06, by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo). Also, [Smith](https://www.exploit-db.com/exploits/38081/) published XSRF exploits which remain unpatched. However, I wanted to see if I could get more out of it.
 
 While the device seems to be popular on the Amazon, I don't really see them around much. So they are not mainstream popular, not like an iPhone, but there are still enough out there to make for a useful target and pose some real dangers. Unfortunately, being below the radar also means that the device has not received much scrutiny from the security community to ensure the devices are safe to use.
 
 # Let's get to work!
-The device is configurable via a web interface and it exposes a whole bunch of network services to support its features.
+The device is configurable via a web interface and it exposes a whole bunch of TCP ports to support its various features.
 
 ![](../../../../images/hootoo_login_page.png "Login page")
 
 __Figure 1:__ Login page
 
-By default, the device doesn’t have a password set on the admin user in the web interface. The user is expected to set it upon initial setup. This is not bad in itself but the device should really require the user to set the password after initial login. The WebUI itself doesn't provide a lot of rich features - it is a simple, to the point, UI. What you'll find there is some basic Wi-Fi settings, MAC spoofing, access to media storage and network configurations. Obviously, an attacker getting access to such things would be bad but not too damaging.
+By default, the device doesn’t have a password set on the admin user in the web interface. The user is expected to change it upon initial setup. This is not bad in itself but the device should really require the user to set the password after initial login. The WebUI itself doesn't provide a lot of rich features - it is a simple, to the point, UI. What you'll find there are some basic Wi-Fi settings, MAC spoofing, access to media storage and network configurations. Obviously, an attacker getting access to such things would be bad but not too damaging.
 
 ![](../../../../images/hootoo_internet_page.png "Configuring the Wi-Fi Bridge")
 
 __Figure 2:__ Login page
 
-Of course, all HTTP interactions are unsecured. There's no way of configuring TLS for Admin interface. As long as you configure WPA for your wireless network then that should be OK, right? I guess, it just depends on how much you trust the people you allow to connect to the device with you. Personally, I would've preferred to have some TLS, not like it takes so much resources to run for one user.
+Of course, all HTTP interactions are unsecured. There's no way of configuring TLS for Admin interface. As long as you configure WPA for your wireless network then that should be OK, right? I guess, it just depends on how much you trust the people you allow to connect to the device with you. Personally, I would've preferred to have some TLS, not like encryption takes so many resources to run for one user. This is a perfect case where I'd gave away some performance for much more security.
 
-Next, I connected to the local device Wi-Fi and did a full nmap scan:
+Next, we connect to the device's local Wi-Fi and do a full nmap scan:
 ```
   $ nmap 192.168.1.1 -p 0-65535
   Starting Nmap 7.31 ( https://nmap.org ) at 2016-12-07 08:35 EST
@@ -46,10 +46,10 @@ Next, I connected to the local device Wi-Fi and did a full nmap scan:
   5880/tcp open     unknown
   8201/tcp open     trivnet2
 ```
-Some interesting things there. I always enjoy seeing 'weird' looking ports open for business. Not quite sure what to do with them yet but I imagine they have something to do with the various services (such as samba and DLNA Services) that the device provides. I was, however, disappointed to not find any remote shell ports such as ssh or telnet. That is especially because telnet was discovered in previous research. I guess HooToo did some enhancements since then.
+Some interesting things there. I always enjoy seeing 'weird' looking ports that open for business. Not quite sure what to do with them yet but I imagine they have something to do with the various services (such as samba and DLNA Services) that the device provides. I was, however, disappointed that there are no remote shell ports to be found, such as ssh or telnet. That is especially because telnet was discovered during analysis of older versions, by chorankates. I guess HooToo did some enhancements since then.
 
 # The firmware
-Next, I'd like to look at the firmware and see what kind of interesting things we could discover there. After a little bit of googling, I found that it's possible to update a device with new firmware found on the [HooToo support](http://www.hootoo.com/downloads-HT-TM06.html) page. The update process is to upload the update file via the authenticated web interface. Finding an update file like this is exciting because it means we get to peek inside the code that is executing on our device.
+Next, I'd like to look at the firmware and see what kind of interesting things we could discover there. After a little bit of googling, I found that it's possible to update the device with new firmware found on the [HooToo support](http://www.hootoo.com/downloads-HT-TM06.html) page. The update process is to upload the update file via the authenticated web interface. Finding an update file like this is exciting because it means we get to peek inside the code that is executing on our device.
 
 ```
 mike@ubuntu:~/$ wget http://www.hootoo.com/media/downloads/HT-TM06-2.000.038.zip
@@ -70,7 +70,7 @@ Archive:  HT-TM06-2.000.038.zip
   inflating: HT-TM06-2.000.038
 ```
 
-I'm not quite sure why, but the update packaged included the same file thrice. Each with a different name:
+I'm not quite sure why, but the update package included the same file thrice. Each with a different name:
 
 ```
 mike@ubuntu:~/$ md5sum *
@@ -88,9 +88,9 @@ mike@ubuntu:~/$ head -3 HT-TM06-2.000.038
 CRCSUM=3448271509
 ```
 
-The first thing that stand out is the fact that there is no signature of the file. So there's no way to verify authenticity. The only thing we get is a CRC check sum which is clearly not a security mechanism.
+The first thing that stands out is the fact that there is no cryptographic signature to be found. So there's no way to verify authenticity. The only thing we get is a CRC checksum which is clearly not a security mechanism.
 
-Next, we find this little section in the code:
+Next, we find this little section in the script:
 
 ```bash
 # untar
@@ -99,7 +99,7 @@ echo "unzip firmware package"
 tail -n +$SKIP $0 > $FWPT/upfs.gz
 ```
 
-The script executes a tail command on itself where it skips `SKIP` number of lines. `SKIP` is defined to be `263`. The reference to firmware is encouraging and curious, so let's do that.
+The script executes a tail command on itself where it skips `SKIP` number of lines. `SKIP` is defined to be `263`. The reference to firmware is encouraging and curious, so let's run this command and see what happens.
 
 ```
 mike@ubuntu:~/$ tail -n +263 HT-TM06-2.000.038 > upfs.gz
@@ -123,7 +123,7 @@ mike@ubuntu:~/$ ls upfs.mount/
 bin  boot  config  dev  etc  firmware  lib  mnt  proc  sys  update.sh  var
 ```
 
-We get lots more fun things to play with. That `update.sh` file and the `firmware` directory are the first targets - I'm going to look into `firmware` first. So, let's keep unwrapping this package!
+We get lots more fun things to play with. That `update.sh` file and the `firmware` directory are the first targets - specifically, `firmware` looks most interesting. So, let's keep unwrapping this package!
 
 ```
 mike@ubuntu:~/upfs.mount$ file firmware/*
@@ -133,7 +133,7 @@ firmware/kernel:        u-boot legacy uImage, Linux Kernel Image, Linux/MIPS, OS
 firmware/rootfs:        Squashfs filesystem, little endian, version 4.0, 5566433 bytes, 1105 inodes, blocksize: 131072 bytes, created: Tue Feb 14 00:36:10 2017
 ```
 
-`rootfs` looks promising because it is a Squashfs filesystem, so this file probably lands up on the flash drive of the device. Looking at the kernel we can also get some information about when it as built and the kind of architecture we should expect. So, let's mount it and peek inside.
+`rootfs` looks promising because it is a *Squashfs* filesystem, so this file probably lands up on the flash drive of the device. Looking at the kernel we can also get some information about when it as built and the kind of architecture we should expect. So, let's mount the filesystem and peek inside.
 
 ```
 mike@ubuntu:~/blog_firmware$ tree -h --dirsfirst -L 3 --filelimit 20 ./rootfs.mount/
@@ -224,9 +224,9 @@ root:$1$yikWMdhq$cIUPc1dKQYHkkKkiVpM/v/:0:0:root:/root:/bin/sh
 ...
 ```
 
-It only took about two days of _john the ripper_ on a reasonably priced AWS instance. The password was discovered by brute force: `20080826`. What's sad is that we have no where to use this password on. There's no login shell and the root user does not work via the web interface. Also, I couldn't authenticate by directly sending the `root` login request - so, the username enforcement is happening on the device. This is a good sign, otherwise we'd have a nice back door that no one would likely check for.
+It only took about two days of [_john the ripper_](http://www.openwall.com/john/) on a reasonably priced AWS instance. The password was discovered by brute force: `20080826`. What's sad is that we have no where to use this password on. There's no login shell and the root user does not work via the web interface. Also, I couldn't authenticate by directly sending the `root` login request using [burp](https://portswigger.net/burp/) - so, the username enforcement is happening on the device. This is a good sign, otherwise we'd have a nice back door that no one would likely check for.
 
-For this write up, we'll stop here with the firmware analysis. There's certainly more to do. But now, we have all the files that we need for any further specialized work.
+For this write up, we'll stop here with the firmware analysis. There's certainly more to do. But for now, we have all the files that we need for further specialized branches of analysis.
 
 # Getting a debugger
 So far, we've discovered some cool things about the device: the firmware, some unfixed issues and it's architecture. However, nothing terrible and, as I've eluded to earlier, we really want to get some execution on the device. Ideally, we want to hack it but until then let's see if we can use semi-normal methods.
