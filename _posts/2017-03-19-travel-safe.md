@@ -4,15 +4,15 @@ title: Protecting the digital nomad
 draft: true
 ---
 
-Digital nomads, driven by the expanding Internet bandwidth and availability, are growing in numbers. There are open ( (/r/digitalnomad)[https://www.reddit.com/r/digitalnomad/]) and commercial ( (Digital Nomad Community)[https://digitalnomadcommunity.net/]) communities out these roaming ladies and gentlemen. However, from (Cyber hygiene)[https://en.wikipedia.org/wiki/Cyber_hygiene] point of view, bouncing around like that can be about as safe as unprotected sex. In this post, I'd like to explore one device that aims to protect the traveler's meatspace to cyberspace bridge. That is the HooToo TM-06 travel router - it is a little device but provides loads of security fun!
+Digital nomads, driven by the expanding Internet bandwidth and availability, are growing in numbers. There are open ( [/r/digitalnomad](https://www.reddit.com/r/digitalnomad/) ) and commercial ( [Digital Nomad Community](https://digitalnomadcommunity.net/)) communities out these roaming ladies and gentlemen. However, from [Cyber hygiene](https://en.wikipedia.org/wiki/Cyber_hygiene) point of view, bouncing around like that can be about as safe as unprotected sex. In this post, I'd like to explore one device that aims to protect the traveler's meatspace to cyberspace bridge. That is the HooToo TM-06 travel router - it is a little device but provides loads of security fun!
 
 # Motivation
-The community of digital nomads is growing and there is already a large number of business/vacation travelers around the world. Their security needs are quite demanding because they have to touch many networks/devices with questionable security hygiene. At (Blackhat 2016)[http://www.blackhat.com/us-16/briefings.html#airbnbeware-short-term-rentals-long-term-pwnage], there was a talk on Internet safety in AirBnB’s and similar rentals showing how risky it can be to move around different networks. As this talk points out, there was a similar issue with public café WiFi’s. The wireless networks from one location to another vary greatly, mostly within the category of being vulnerable, exposing guests and hosts to malware. That piqued my interest and initiated this research.
+The community of digital nomads is growing and there is already a large number of business/vacation travelers around the world. Their security needs are quite demanding because they have to touch many networks/devices with questionable security hygiene. At [Blackhat 2016](http://www.blackhat.com/us-16/briefings.html#airbnbeware-short-term-rentals-long-term-pwnage), there was a talk on Internet safety in AirBnB’s and similar rentals showing how risky it can be to move around different networks. As this talk points out, there was a similar issue with public café WiFi’s. The wireless networks from one location to another vary greatly, mostly within the category of being vulnerable, exposing guests and hosts to malware. That piqued my interest and initiated this research.
 
 Looking for a solution, I discovered the concept of a travel router. Basically, a MiFi but without the SIM card. A search on amazon returned well over a thousand of results - ranging in fitness to the search criteria. Taking price and function into account, I zeroed in on the HooToo TM-06 (the device). Its functions include WiFi extension, WiFi to Ethernet bridging and Hot Spot creation. However, security is one of the selling points: "create your own secure Wi-Fi network," they said. I took this as meaning that I can create a network more secure than what I bridge to in a Cafe, AirBnB or a hotel. At the very least, I could have an additional layer of protection such as what I could get from a NAT or a good firewall. Naturally, I wanted to _thoroughly_ check if this security claim was true.
 
 # Previous work
-There was some initial work done on these devices by (chorankates)[https://github.com/chorankates/h4ck/tree/master/hootoo]. chorankates looked at a whole bunch of HooToo devices which included a previous version of the TM-06 router. Then, (Smith)[https://www.exploit-db.com/exploits/38081/] published XSRF exploits which remain unfixed. However, I wanted to see if I could get arbitrary code execution.
+There was some initial work done on these devices by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo). chorankates looked at a whole bunch of HooToo devices which included a previous version of the TM-06 router. Then, [Smith](https://www.exploit-db.com/exploits/38081/) published XSRF exploits which remain unfixed. However, I wanted to see if I could get arbitrary code execution.
 
 While the device seems to be popular on the Amazon, I don't really see them around much. So they are not mainstream popular but there are still enough out there to make for a useful target. Obviously, these devices are not as mainstream as an iPhone. But they can still pose some real dangers. Unfortunately, being below the radar also means that not a lot of security work has been done to ensure the devices are safe to use.
 
@@ -49,7 +49,7 @@ Next, I connected to the local device Wi-Fi and did a full nmap scan:
 Some interesting things there. I always enjoy seeing 'weird' looking ports open for business. Not quite sure what to do with them yet but I imagine they have something to do with the various services (such as samba and DLNA Services) that the device provides. I was, however, disappointed to not find any remote shell ports such as ssh or telnet. That is especially because telnet was discovered in previous research. I guess HooToo did some enhancements since then.
 
 # The firmware
-Next, I'd like to look at the firmware and see what kind of interesting things we could discover there. After a little bit of googling, I found that it's possible to update a device with new firmware found on the HooToo (support)[http://www.hootoo.com/downloads-HT-TM06.html] page. The update process is to upload the update file via the authenticated web interface. Finding an update file like this is exciting because it means we get to peek inside the code that is executing on our device.
+Next, I'd like to look at the firmware and see what kind of interesting things we could discover there. After a little bit of googling, I found that it's possible to update a device with new firmware found on the [HooToo support](http://www.hootoo.com/downloads-HT-TM06.html) page. The update process is to upload the update file via the authenticated web interface. Finding an update file like this is exciting because it means we get to peek inside the code that is executing on our device.
 
 ```
 mike@ubuntu:~/$ wget http://www.hootoo.com/media/downloads/HT-TM06-2.000.038.zip
@@ -216,7 +216,7 @@ mike@ubuntu:~/blog_firmware$ tree -h --dirsfirst -L 3 --filelimit 20 ./rootfs.mo
 59 directories, 35 files
 ```
 
-There is nothing really that is out of the ordinary. Looks like a small, possibly custom, distribution of Linux for a MIPS embedded system. On the (support page)[http://www.hootoo.com/hootoo-tripmate-ht-tm06-wireless-router.html], we see that the device's chipset is MTK 7620. With this information we can find the (datasheet)[https://wiki.microduino.cc/images/3/34/MT7620_Datasheet.pdf] and the CPU instruction set manual for the (MIPS32 24K)[https://people.freebsd.org/~adrian/mips/MD00343-2B-24K-SUM-03.11.pdf] Processor. This will come handy in the future.
+There is nothing really that is out of the ordinary. Looks like a small, possibly custom, distribution of Linux for a MIPS embedded system. On the [support page](http://www.hootoo.com/hootoo-tripmate-ht-tm06-wireless-router.html), we see that the device's chipset is MTK 7620. With this information we can find the [datasheet](https://wiki.microduino.cc/images/3/34/MT7620_Datasheet.pdf) and the CPU instruction set manual for the [MIPS32 24K](https://people.freebsd.org/~adrian/mips/MD00343-2B-24K-SUM-03.11.pdf) Processor. This will come handy in the future.
 
 ```
 mike@ubuntu:~/$ cat ./rootfs.mount/etc/passwd
@@ -231,7 +231,7 @@ For this write up, we'll stop here with the firmware analysis. There's certainly
 # Getting a debugger
 So far, we've discovered some cool things about the device: the firmware, some unfixed issues and it's architecture. However, nothing terrible and, as I've eluded to earlier, we really want to get some execution on the device. Ideally, we want to hack it but until then let's see if we can use semi-normal methods.
 
-Taking our analysis so far, we notice that the firmware is not signed and it is a simple shellscript. So, let's build our own! :-) Also, we notice that in the previous analysis, by (chorankates)[https://github.com/chorankates/h4ck/tree/master/hootoo], of the previous version of the device, port 23 (telnet) was open. So, I would guess that this functionality was disabled rather than removed.
+Taking our analysis so far, we notice that the firmware is not signed and it is a simple shellscript. So, let's build our own! :-) Also, we notice that in the previous analysis, by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo), of the previous version of the device, port 23 (telnet) was open. So, I would guess that this functionality was disabled rather than removed.
 
 ```
 mike@ubuntu:~/rootfs.mount$ find ./ -iname '*telnet*'
@@ -346,7 +346,7 @@ boot    dev     etc_ro  lib     mnt     proc    sys     usr     www
 # Connection closed by foreign host.
 ```
 
-We are in business! Getting a command shell on an embedded device is so exciting :-) But, let's move on. The title of this section is 'Getting a debugger' and that is what I want. GDB comes to mind, however, I do not find it on the device. This means we will have to find a version that runs on MIPS. After some googling, I found that (Rapid7)[https://github.com/rapid7/embedded-tools] has actually published a version of GDB server that runs on MIPS. Although, we have a terminal session on the device, there's not really a good way of uploading files to it. However, it does automatically mount USB storage devices. That's convenient.
+We are in business! Getting a command shell on an embedded device is so exciting :-) But, let's move on. The title of this section is 'Getting a debugger' and that is what I want. GDB comes to mind, however, I do not find it on the device. This means we will have to find a version that runs on MIPS. After some googling, I found that [Rapid7](https://github.com/rapid7/embedded-tools) has actually published a version of GDB server that runs on MIPS. Although, we have a terminal session on the device, there's not really a good way of uploading files to it. However, it does automatically mount USB storage devices. That's convenient.
 
 We attach to a process like so:
 
