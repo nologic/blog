@@ -4,7 +4,7 @@ title: Protecting the digital nomad
 draft: true
 ---
 
-Digital nomads, driven by the expanding Internet bandwidth and availability, are growing in numbers. There are open communities like the Subreddit [/r/digitalnomad](https://www.reddit.com/r/digitalnomad/) and others are commercial like [Digital Nomad Community](https://digitalnomadcommunity.net/). However, from [Cyber hygiene](https://en.wikipedia.org/wiki/Cyber_hygiene) point of view, bouncing around like that can be about as safe as unprotected sex. In this post, I'd like to explore one device that aims to protect the traveler's meatspace to cyberspace bridge. That is the *HooToo Travel Mate 06 (TM-06)* travel router - it is a little device but provides loads of security fun!
+Digital nomads, driven by the expanding Internet bandwidth and availability, are growing in numbers. There are open communities like the Subreddit [/r/digitalnomad](https://www.reddit.com/r/digitalnomad/) and others are commercial like the [Digital Nomad Community](https://digitalnomadcommunity.net/). However, from the [Cyber hygiene](https://en.wikipedia.org/wiki/Cyber_hygiene) point of view, bouncing around like that can be about as safe as unprotected sex. In this post, I'd like to explore the security of one device that aims to protect the traveler's meatspace to cyberspace bridge. The device is the *HooToo Travel Mate 06 (TM-06)* travel router - it is a cute little device but provides loads of security fun!
 
 # Motivation
 The community of digital nomads is growing and there is already a large number of business/vacation travelers around the world. Their security needs are quite demanding because they have to touch many networks/devices with questionable security hygiene. At [Blackhat 2016](http://www.blackhat.com/us-16/briefings.html#airbnbeware-short-term-rentals-long-term-pwnage), there was a talk on Internet safety in AirBnB’s and similar rentals showing how risky it can be to move around different networks. As this talk points out, there was a similar issue with public café WiFi’s. The wireless networks from one location to another vary greatly, mostly within the category of being vulnerable, exposing guests and hosts to malware. That piqued my interest and initiated this research.
@@ -32,7 +32,7 @@ __Figure 2:__ Login page
 Of course, all HTTP interactions are unsecured. There's no way of configuring TLS for Admin interface. As long as you configure WPA for your wireless network then that should be OK, right? I guess, it just depends on how much you trust the people you allow to connect to the device with you. Personally, I would've preferred to have some TLS, not like it takes so much resources to run for one user.
 
 Next, I connected to the local device Wi-Fi and did a full nmap scan:
-```
+```bash
   $ nmap 192.168.1.1 -p 0-65535
   Starting Nmap 7.31 ( https://nmap.org ) at 2016-12-07 08:35 EST
   Strange read error from 192.168.1.1 (49 - 'Can't assign requested address')
