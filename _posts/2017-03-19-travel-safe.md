@@ -229,9 +229,9 @@ It only took about two days of [_john the ripper_](http://www.openwall.com/john/
 For this write up, we'll stop here with the firmware analysis. There's certainly more to do. But for now, we have all the files that we need for further specialized branches of analysis.
 
 # Getting a debugger
-So far, we've discovered some cool things about the device: the firmware, some unfixed issues and it's architecture. However, nothing terrible and, as I've eluded to earlier, we really want to get some execution on the device. Ideally, we want to hack it but until then let's see if we can use semi-normal methods.
+So far, we've discovered some useful things about the device: the firmware, some unfixed issues and its architecture. However, nothing terrible and, as I've eluded to earlier, we really want to get some execution on the device. Ideally, we want to crack in but until then let's see if we can use semi-normal methods.
 
-Taking our analysis so far, we notice that the firmware is not signed and it is a simple shellscript. So, let's build our own! :-) Also, we notice that in the previous analysis, by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo), of the previous version of the device, port 23 (telnet) was open. So, I would guess that this functionality was disabled rather than removed.
+Looking at our analysis so far, we notice that the firmware is not signed and it is a simple shell script. So, let's build our own update! :-) Also, we notice that in the previous analysis, by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo), the earlier versions of the device had port 23 (telnet) open. So, I would guess that this functionality was disabled rather than removed.
 
 ```
 mike@ubuntu:~/rootfs.mount$ find ./ -iname '*telnet*'
@@ -250,13 +250,13 @@ if [ ! -f /etc/telnetflag ]; then
 fi
 ```
 
-A quick search reveals that telnet is, indeed, available and can be started via the `opentelnet.sh` script. What we'll do is attempt to execute this command via our own update mechanism.
+A quick search reveals that telnet is, indeed, available and can be started via the `opentelnet.sh` script. What we'll do is attempt to execute this command via our own firmware update package.
 
-The update mechanism is accessible after `admin` has logged in on this URL: http://192.168.1.1/app/system/firmware.html.
+The update mechanism is accessible after the `admin` user has logged in on this URL: http://192.168.1.1/app/system/firmware.html.
 
 ![](../../../../images/hootoo_update_page.png "Uploading new firmware")
 
-My first attempt was to upload a basic shellscript:
+My first attempt was to upload a basic shell script:
 
 ```bash
 #!/bin/sh
@@ -265,7 +265,7 @@ My first attempt was to upload a basic shellscript:
 exit 1
 ```
 
-I wanted to return an error, so that the system didn't decide to irreversibly change anything else and possibly brick the device. Unfortunately, that did not work. Obviously, I got no explanation. But, I realized that the update usually comes with a CRC checksum. There is a check in the proper firmware update that looks like this:
+I wanted to return an error, so that the system didn't decide to irreversibly change anything else and possibly brick the device. Unfortunately, that did not work. Obviously, I got no explanation. Further analyzing the official update package, we notice that the update usually comes with a CRC checksum. There is a check in the official firmware update that looks like this:
 
 ```bash
 crcsum=`sed '1,3d' $0|cksum|sed -e 's/ /Z/' -e 's/   /Z/'|cut -dZ -f1`
@@ -280,7 +280,7 @@ echo "firmware crc success!"
 
 It was a little confusing why the failure occurred even though the check looks to be self enforced. What I realized later, is that the device will actually perform it's own CRC validation before letting the script execute. However, the process is the same.
 
-Using my Mac Book Pro, I generated a check sum using the same command. Notice that I'm using an older version of the firmware that the one I mentioned above. That is because at the time of this research version 2.000.030 was the latest. So far, such details are not relevant to the work published in this blog.
+Using my Mac Book Pro, I generated a check sum using the same command that was found in the official update. Notice that I'm using an older version of the firmware than the one I mentioned above. This is because at the time of this research version 2.000.030 was the latest. So far, such details are not relevant to the work in this writeup.
 
 ```
 $ sed '1,3d' fw-7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030 \
@@ -296,9 +296,9 @@ mike@ubuntu:~$ sed '1,3d' fw-7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030 \
 3587589093
 ```
 
-Worked! I still don't know what the deal is. It looks like the `cksum` command on Linux uses a different algorithm compared to the on OS X. Probably should have done this sooner given that the device run a version of Linux. Lessons learned!
+Worked! I still don't know what the deal is - I'm sure there is a simple explanation. It looks like the `cksum` command on Linux uses a different algorithm compared to the on OS X. Probably should have done this sooner given that the device runs a version of Linux. Lessons learned!
 
-With this information, I constructed another shell script with proper CRC checksum this time:
+With this information, I constructed another shell script with a proper CRC checksum this time:
 
 ```bash
 #!/bin/sh
@@ -318,7 +318,7 @@ CPU=7620
 exit 1
 ```
 
-Those other lines were a copy/paste by product, since the CRC was already generate I didn't want to take them out. Upon uploading this as a firmware update, the device gave me an error with the firmware. However, doing a network scan, I saw that telnet was open!
+Those other lines are a copy/paste by product, since the CRC was already generates I didn't want to take them out. Upon uploading this as a firmware update, the device gave me an error. However, doing a network scan, I saw that telnet was open! This means that the error was generated by the `exit 1`, rather than by incompatible firmware.
 
 ```
 $ nmap 192.168.1.1
@@ -332,7 +332,7 @@ PORT   STATE SERVICE
 Nmap done: 1 IP address (1 host up) scanned in 0.19 seconds
 ```
 
-Then, I was able to login using the cracked root password:
+The custom update enabled us to login using the cracked root password:
 
 ```
 $ telnet 192.168.1.1
@@ -348,7 +348,7 @@ boot    dev     etc_ro  lib     mnt     proc    sys     usr     www
 # Connection closed by foreign host.
 ```
 
-We are in business! Getting a command shell on an embedded device is so exciting :-) But, let's move on. The title of this section is 'Getting a debugger' and that is what I want. GDB comes to mind, however, I do not find it on the device. This means we will have to find a version that runs on MIPS. After some googling, I found that [Rapid7](https://github.com/rapid7/embedded-tools) has actually published a version of GDB server that runs on MIPS. Although, we have a terminal session on the device, there's not really a good way of uploading files to it. However, it does automatically mount USB storage devices. That's convenient.
+We are in business! Getting a command shell on an embedded device is so exciting :-) But, let's move on. The title of this section is 'Getting a debugger' and that is what I want. GDB comes to mind, however, I do not find it on the device. This means we will have to find a version that runs on MIPS. After some googling, I found that [Rapid7](https://github.com/rapid7/embedded-tools) has actually published a version of the GDB server that runs on MIPS. Although, we have a terminal session on the device, there's not really a good way of uploading files to it. However, it does automatically mount USB storage devices which is super convenient.
 
 We attach to a process like so:
 
@@ -386,7 +386,7 @@ Remote debugging using 192.168.1.1:9999
 Cool! We have a debugger.
 
 # Conclusion
-Secure infrastructure is important. It is important even to a digital nomad, whether they are a permanent nomad or just a temporary one. We've seen how it can be to get secure infrastructure based on work done by security professionals. HooToo tries to provide an additional layer of security via the Trip Mate travel router.
+Secure infrastructure is important. It is important even to a digital nomad, whether they are a permanent nomad or just a temporary one. Based on research by security professionals, we've seen how hard it can be to get secure infrastructure on the go. HooToo tries to provide an additional layer of security via the Trip Mate travel router.
 
 In this post, we have discovered the surface area that could potentially be used for attacks. We have also seen how a researcher could gain shell access to their device by uploading fake firmware updates. Using these methods, it becomes possible to obtain the binaries that execute on the device as well as set up a dynamic analysis environment.
 
