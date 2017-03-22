@@ -7,14 +7,14 @@ draft: true
 Digital nomads, driven by the expanding Internet bandwidth and availability, are growing in numbers. There are open communities like the Subreddit [/r/digitalnomad](https://www.reddit.com/r/digitalnomad/) and others are commercial like the [Digital Nomad Community](https://digitalnomadcommunity.net/). However, from the [Cyber hygiene](https://en.wikipedia.org/wiki/Cyber_hygiene) point of view, bouncing around like that can be about as safe as unprotected sex. In this post, I'd like to explore the security of one device that aims to protect the traveler's meatspace to cyberspace bridge. The device is the *HooToo Travel Mate 06 (TM-06)* travel router - it is a cute little device but provides loads of security fun!
 
 # Motivation
-The community of digital nomads is growing and there is already a large number of business/vacation travelers around the world. Their security needs are quite demanding because they have to touch many networks/devices with questionable security hygiene. At [Blackhat 2016](http://www.blackhat.com/us-16/briefings.html#airbnbeware-short-term-rentals-long-term-pwnage), there was a talk on Internet safety in AirBnB’s and similar rentals showing how risky it can be to move around different networks. As this talk points out, there was a similar issue with public café WiFi’s. The wireless networks from one location to another vary greatly, mostly within the category of being vulnerable, exposing guests and hosts to malware. That piqued my interest and initiated this research.
+The community of digital nomads is growing in addition to an already large number of business/vacation travelers around the world. Apparently, the community is on its way to [one billion](https://levels.io/future-of-digital-nomads/) in numbers. However, I'm more interested on the security side. Their security needs are quite demanding because they have to touch many networks/devices with questionable security hygiene. At [Blackhat 2016](http://www.blackhat.com/us-16/briefings.html#airbnbeware-short-term-rentals-long-term-pwnage), there was a talk on Internet safety in AirBnB’s and similar rentals. The speaker showed us how risky it can be to move between networks of differing standards. As this talk points out, there is a similar issue with public Café Wi-Fi’s. The wireless networks from one location to another vary greatly, mostly within the category of being vulnerable, exposing guests and hosts to malware. That piqued my interest and initiated this research.
 
-Looking for a solution, I discovered the concept of a travel router. Basically, a MiFi but without the SIM card. A search on amazon returned well over a thousand of results - ranging in fitness to the search criteria. Taking price and function into account, I zeroed in on the HooToo TM-06 (the device). Its functions include WiFi extension, WiFi to Ethernet bridging and Hot Spot creation. However, security is one of the selling points: "create your own secure Wi-Fi network," they said. I took this as meaning that I can create a network more secure than what I bridge to in a Cafe, AirBnB or a hotel. At the very least, I could have an additional layer of protection such as what I could get from a NAT or a good firewall. Naturally, I wanted to _thoroughly_ check if this security claim was true.
+Looking for a solution, I discovered the concept of a travel router. Basically, a MiFi but without the SIM card and some additional features. A search on amazon returned well over a thousand of results - ranging in fitness to the search criteria. Taking price and function into account, I zeroed in on the HooToo TM-06 (the device). Its functions include Wi-Fi extension, Wi-Fi to Ethernet bridging and Hot Spot creation. However, security is one of the selling points: "create your own secure Wi-Fi network," they said. I took this to mean that I can create a network more secure than what I bridge to in a Café, AirBnB or a hotel. At the very least, I could have an additional layer of protection such as what I could get from a NAT or a good firewall. Naturally, I wanted to _thoroughly_ check if this security claim was true.
 
 # Previous work
-There was some initial work done on these devices by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo). chorankates looked at a whole bunch of HooToo devices which included a previous version of the TM-06 router. Then, [Smith](https://www.exploit-db.com/exploits/38081/) published XSRF exploits which remain unfixed. However, I wanted to see if I could get arbitrary code execution.
+There was some initial work done on HooToo devices, including the previous versions of the TM-06, by [chorankates](https://github.com/chorankates/h4ck/tree/master/hootoo). Also, [Smith](https://www.exploit-db.com/exploits/38081/) published XSRF exploits which remain unpatched. However, I wanted to see if I could get arbitrary code execution.
 
-While the device seems to be popular on the Amazon, I don't really see them around much. So they are not mainstream popular but there are still enough out there to make for a useful target. Obviously, these devices are not as mainstream as an iPhone. But they can still pose some real dangers. Unfortunately, being below the radar also means that not a lot of security work has been done to ensure the devices are safe to use.
+While the device seems to be popular on the Amazon, I don't really see them around much. So they are not mainstream popular, not like an iPhone, but there are still enough out there to make for a useful target and pose some real dangers. Unfortunately, being below the radar also means that the device has not received much scrutiny from the security community to ensure the devices are safe to use.
 
 # Let's get to work!
 The device is configurable via a web interface and it exposes a whole bunch of network services to support its features.
@@ -23,9 +23,9 @@ The device is configurable via a web interface and it exposes a whole bunch of n
 
 __Figure 1:__ Login page
 
-By default, the device doesn’t have a password set on the admin user in the web interface. The user is expected to set it upon initial setup. This is not bad in itself but the device should really require the user to set the password after initial login. The WebUI itself doesn't provide a lot of rich features - it is a simple, to the point, UI. What you'll find there is some basic WiFi settings, MAC spoofing, access to media storage and network configurations. Obviously, an attacker getting access to such things would be bad but not too damaging.
+By default, the device doesn’t have a password set on the admin user in the web interface. The user is expected to set it upon initial setup. This is not bad in itself but the device should really require the user to set the password after initial login. The WebUI itself doesn't provide a lot of rich features - it is a simple, to the point, UI. What you'll find there is some basic Wi-Fi settings, MAC spoofing, access to media storage and network configurations. Obviously, an attacker getting access to such things would be bad but not too damaging.
 
-![](../../../../images/hootoo_internet_page.png "Configuring the WiFi Bridge")
+![](../../../../images/hootoo_internet_page.png "Configuring the Wi-Fi Bridge")
 
 __Figure 2:__ Login page
 
@@ -283,14 +283,16 @@ It was a little confusing why the failure occurred even though the check looks t
 Using my Mac Book Pro, I generated a check sum using the same command. Notice that I'm using an older version of the firmware that the one I mentioned above. That is because at the time of this research version 2.000.030 was the latest. So far, such details are not relevant to the work published in this blog.
 
 ```
-$ sed '1,3d' fw-7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030|cksum|sed -e 's/ /Z/' -e 's/   /Z/'|cut -dZ -f1
+$ sed '1,3d' fw-7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030 \
+  |cksum|sed -e 's/ /Z/' -e 's/   /Z/'|cut -dZ -f1
 3784598516
 ```
 
 D'oh! It doesn't match! The number in the firmware file is `3587589093`. That's weird! This was a real head scratcher for a while because I really wanted to be able to generate a CRC number that matches what the device expects. After a few hours of unproductive search, I decided to try it on my Ubuntu VM.
 
 ```
-mike@ubuntu:~$ sed '1,3d' fw-7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030 |cksum|sed -e 's/ /Z/' -e 's/   /Z/'|cut -dZ -f1
+mike@ubuntu:~$ sed '1,3d' fw-7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030 \
+              |cksum|sed -e 's/ /Z/' -e 's/   /Z/'|cut -dZ -f1
 3587589093
 ```
 
