@@ -107,7 +107,7 @@ mike@ubuntu:~/$ file upfs.gz
 upfs.gz: gzip compressed data, was "initrdup", from Unix, last modified: Tue Feb 14 00:36:14 2017, max compression
 ```
 
-Cool! That seems to have worked and given us a valid gzip file.
+Cool! That seems to have worked and given us a valid gzip file. This command extracted the binary content that was following the shell script which turned out to be the gzip file.
 
 ```
 mike@ubuntu:~/$ gunzip upfs.gz
