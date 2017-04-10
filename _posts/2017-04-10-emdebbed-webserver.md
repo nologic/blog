@@ -283,7 +283,11 @@ I find this phenomenon quite often. There will be an instruction that stores a v
 Finally, a bunch of NOPs around branching. The compiler is being safe about the two stage pipeline to make sure that when the registers are used they are in fact fully actualized.
 
 # Conclusion
-We went through some interesting patterns for the implementation of the server. Hopefully, it has given you enough of an intuition for your own reverse engineering efforts in the future. We got really lucky in this case because the compiler was not aggressively optimizing the code and so we got to see a lot of patterns that make reversing of this server much easier.	
+We went through some interesting patterns for the implementation of the server. Hopefully, it has given you enough of an intuition for your own reverse engineering efforts in the future. We got really lucky in this case because the compiler was not aggressively optimizing the code and so we got to see a lot of patterns that make reversing of this server much easier.
+
+The binaries referenced in this article can be downloaded here:
+* SHA ([7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030_fileserv](../../../../resources/7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030_fileserv)) = 86b96a77f8f09ac4937e079e9db1e1e3c9a2d24f
+* SHA ([7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030_ioos](../../../../resources/7620-WiFiDGRJ-HooToo-633-HT-TM06-2.000.030_ioos)) = 7420757f92f140708e4628efe589924cfcc1fade
 
 
 
