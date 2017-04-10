@@ -230,7 +230,9 @@ This pattern is really great news for any sort of buffer overflow vulnerabilitie
 One way to locate these patterns is to use the function finder script we built is the previous section. All we have to do is filter on `*_new` for function names.
 
 ```python
-Python>for i in [ (x[0], x[1], x[3]) for x in findFuncNames() if (x[3].find("new") != -1)]: print i
+Python>for i in [ (x[0], x[1], x[3]) 
+          for x in findFuncNames() 
+             if (x[3].find("new") != -1)]: print i
 ('0x40ca7cL', 'str_parse_new', 'str_parse_new')
 ('0x40cb30L', 'str_parse_new', 'str_parse_new')
 ('0x40cc28L', 'str_parse_new', 'str_parse_new')
