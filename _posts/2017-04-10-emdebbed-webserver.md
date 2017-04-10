@@ -83,21 +83,21 @@ Let's dive in. First thing I notice is that the function responsible for error r
 
 ```python
 def findPrintfStrings(addr):
-	ret = {'file': ''}
+ ret = {'file': ''}
 
-	# find the function name, listing printf args
-	for a in range(addr - 10*4, addr, 4):
-		disasm = GetDisasm(a)
-		if(disasm[0:4] == "addi" and GetOpnd(a, 0)[0:2] == '$a'):
-			ret[GetOpnd(a, 0)] = disasm.split('#')[1].strip()
+ # find the function name, listing printf args
+ for a in range(addr - 10*4, addr, 4):
+   disasm = GetDisasm(a)
+   if(disasm[0:4] == "addi" and GetOpnd(a, 0)[0:2] == '$a'):
+     ret[GetOpnd(a, 0)] = disasm.split('#')[1].strip()
 
-    # find he source code file
-	for a in range(addr - 30*4, addr, 4):
-		disasm = GetDisasm(a)
-		if(disasm[0:4] == "addi" and GetOpnd(a, 0) == '$a0' and disasm.split('#')[1][0:7] == ' "/home'):
-			ret['file'] = GetString(GetOperandValue(a, 1) + 0x540000, -1, ASCSTR_C)
+ # find he source code file
+ for a in range(addr - 30*4, addr, 4):
+   disasm = GetDisasm(a)
+   if(disasm[0:4] == "addi" and GetOpnd(a, 0) == '$a0' and disasm.split('#')[1][0:7] == ' "/home'):
+     ret['file'] = GetString(GetOperandValue(a, 1) + 0x540000, -1, ASCSTR_C)
 
-	return ret
+ return ret
 ```
 
 Given an address of a call to `fprintf` the function will trace back several instructions and find all strings that are stored in the arguments. Noticing that the function name is located in the first variable argument to `fprintf`, I don't need to worry about the arguments placed placed on the stack. The first loop looks at the `addi` instructions that refer to the `$a0 - $a4` registers. These are the instructions that set the arguments. The second loop looks for references to strings that start with `/home` since that is where the source code was, apparently, compiled. Together we get a nice picture of what the error message looks like. We can see the name of the current function and its file location. For the assembly shown above, this is the output we get:
@@ -113,23 +113,23 @@ OK, given that we can find information about a function with one error message, 
 
 ```python
 def findFuncNames():
-	ret = []
-	for i in XrefsTo(LocByName("fprintf")):
-		if(GetDisasm(i.frm)[0:2] == "la"):
-			args = findPrintfStrings(i.frm)
+ ret = []
+ for i in XrefsTo(LocByName("fprintf")):
+   if(GetDisasm(i.frm)[0:2] == "la"):
+     args = findPrintfStrings(i.frm)
 
-			# filter by error message pattern
-			if(args["$a1"][0:5] == '"(%s,'):
-				func = idaapi.get_func(i.frm)
-				name = "no_func"
+     # filter by error message pattern
+     if(args["$a1"][0:5] == '"(%s,'):
+       func = idaapi.get_func(i.frm)
+       name = "no_func"
 
-				# sometimes functions aren't recognized by IDA
-				if(func is not None):
-					name = GetFunctionName(func.startEA)
+       # sometimes functions aren't recognized by IDA
+       if(func is not None):
+         name = GetFunctionName(func.startEA)
 
-				ret.append( (hex(i.frm), name, args["$a3"].replace('"', ''), args['file'] ) )
+       ret.append( (hex(i.frm), name, args["$a3"].replace('"', ''), args['file'] ) )
 
-	return ret
+ return ret
 ```
 
 Once an `fprintf` is located, the script will look for `la` instructions. That is where the address for the function is loaded before bing used. I chose the `la` vs the `jalr` instruction as a means of reducing the number of instructions I have to consider. Then we call the `findPrintfStrings` function from earlier to extract the strings. Once the strings are extracted we can filter on a common filter for all error messages. We notice that, first, the error specifies the context before moving on to other information. So, we look for `"(%s,` to remove irrelevant `fprintf` occurrences.
