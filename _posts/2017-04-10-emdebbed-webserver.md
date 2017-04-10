@@ -60,7 +60,7 @@ Finally, MIPS is a pipelined architecture where the developer needs to be aware 
 
 I've never, until now, reversed MIPS and from personal experience can say that it is a very easy architecture to get a hang of. So, if this is a your first time then just take one step at a time and try to follow through with the examples in this article. You will get used to the architecture and things will become exponentially easier!
 
-# Extracting source code information.
+# Extracting the source
 Compilers are really smart tools, but in the end they are just a transformation function of the source code. So, if the source code has certain patterns then it may be possible to detect and use them to learn about the binary code. In the case of the webserver from the device, the compiler does not perform a lot of optimizations and so we are able to extract quite a lot of information. Next sections will focus on some of the more obvious patterns that I've been able to use for my advantage. Going through these examples is useful to learn about the reverse engineering process as well as how to use various IDA interfaces.
 
 ## Finding functions
