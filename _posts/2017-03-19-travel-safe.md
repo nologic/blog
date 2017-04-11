@@ -2,6 +2,7 @@
 layout: post
 title: Protecting the digital nomad
 draft: true
+hidden: true
 ---
 
 Digital nomads, driven by the expanding Internet bandwidth and availability, are growing in numbers. There are open communities like the Subreddit [/r/digitalnomad](https://www.reddit.com/r/digitalnomad/) and others are commercial like the [Digital Nomad Community](https://digitalnomadcommunity.net/). However, from the [Cyber hygiene](https://en.wikipedia.org/wiki/Cyber_hygiene) point of view, bouncing around like that can be about as safe as unprotected sex. In this post, I'd like to explore the security of one device that aims to protect the traveler's meatspace to cyberspace bridge. The device is the *HooToo Travel Mate 06 (TM-06)* travel router - it is a cute little device but provides loads of security fun!
