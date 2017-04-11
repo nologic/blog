@@ -2,6 +2,7 @@
 layout: post
 title: Reverse Engineering of an Embedded Webserver
 draft: true
+hidden: true
 ---
 
 In this article we look into the implementation of the embedded webserver that runs on the HooToo Travel Mate 6 router (the device). The webserver is at the core of the TM-06 user interface. It is also the best attack surface to start with. It is best due to the complexity of processing web requests and a historical precedent of web software being susceptible to memory corruption vulnerabilities.
