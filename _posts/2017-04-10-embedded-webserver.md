@@ -10,7 +10,7 @@ In this article we look into the implementation of the embedded webserver that r
 # Locating the webserver
 Looking at the HTTP traffic we see that there are two webservers at play. First is the `lighttpd/1.4.28` and another is the `vshttpd`. Different server values are returned even though same IP/port combinations are used. Clearly there is some sort of proxying set up. So, let's go looking for these servers.
 
-Scanning through _/etc/init.d_ directory, we find that `fileserv.sh` has references _/etc/fileserv/lighttpd.conf_. That's cool, it means that _/usr/sbin/fileserv_ is the _lighttpd_ server we are looking for. The binary is referenced by the same shell script. Scanning further, we find an _/etc/init.d/web_ file which references _/usr/sbin/ioos_ file. Based on the name and the process of elimination let's decide that this is our other webserver which calls itself `vshttpd`. This will be confirmed by reverse engineering.
+Scanning through _/etc/init.d_ directory, we find that `fileserv.sh` has references _/etc/fileserv/lighttpd.conf_. That's cool, it means that _/usr/sbin/fileserv_ is the _lighttpd_ server we are looking for. The binary is referenced by the same shell script. Scanning further, we find an _/etc/init.d/web_ file which has references to the _/usr/sbin/ioos_ file. Based on the name and the process of elimination let's decide that this is our other webserver which calls itself `vshttpd`. This will be confirmed by reverse engineering.
 
 ```
 $ strings /usr/sbin/ioos | grep vshttpd
@@ -30,7 +30,7 @@ We get some good confirmation using strings. The _file_ command gives us some go
 ```
 
 # MIPS Overview
-The device runs a version of a MIPS processor. The instruction set is documented here: [MIPS32 24K](https://people.freebsd.org/~adrian/mips/MD00343-2B-24K-SUM-03.11.pdf). It is a relatively simple architecture with a small instruction set. I would encourage everyone to learn it because it very prevalent in the embedded device world and MIPS is a great starting point to learn about assembly.
+The device runs a version of a MIPS processor. The instruction set is documented here: [MIPS32 24K](https://people.freebsd.org/~adrian/mips/MD00343-2B-24K-SUM-03.11.pdf). It is a relatively simple architecture with a small instruction set. I would encourage everyone to learn it because it is prevalent in the embedded devices world, and MIPS is a great starting point to learn about assembly.
 
 By convention there's a stack at a high address, similar to that of the x86 systems. On the TM-06 the stack actually moves around due to the memory randomization anti-exploitation measure. The stack is managed by the compiler where it will add/subtract from the `$sp` register on function return/calls. The `$sp` register stores the current stack pointer. A function preamble would look something like this:
 
@@ -110,7 +110,7 @@ Python>findPrintfStrings(ScreenEA())
  '$a3': '"flash_non_region_erase"'}
 ```
 
-OK, given that we can find information about a function with one error message, how we do we find all of them and do the mapping? I like the approach of being very coarse grained and then refining with each step. This way there's more space for tweaking and adjusting for accuracy depending on our needs. So, the function below will look for all uses of `fprintf`.
+OK, given that we can find information about a function with one error message, how we do we find all of them and do the mapping? I like to take an iterative  approach by refining the information at hand with each step. This way there's more space for tweaking and adjusting for accuracy depending on our needs. So, the function below will first look for all uses of `fprintf`.
 
 ```python
 def findFuncNames():
@@ -133,7 +133,7 @@ def findFuncNames():
  return ret
 ```
 
-Once an `fprintf` is located, the script will look for `la` instructions. That is where the address for the function is loaded before bing used. I chose the `la` vs the `jalr` instruction as a means of reducing the number of instructions I have to consider. Then we call the `findPrintfStrings` function from earlier to extract the strings. Once the strings are extracted we can filter on a common filter for all error messages. We notice that, first, the error specifies the context before moving on to other information. So, we look for `"(%s,` to remove irrelevant `fprintf` occurrences.
+Once an `fprintf` is located, the script will look for `la` (load address) instructions. That is where the address for the function is loaded before bing used. I chose the `la` vs the `jalr` instruction as a means of reducing the number of instructions I have to consider. Then we call the `findPrintfStrings` function from earlier to extract the strings. Once the strings are extracted we can filter on a common filter for all error messages. We notice that, first, the error specifies the context before moving on to other information. So, we look for `"(%s,` to remove irrelevant `fprintf` occurrences.
 
 Finally, using the IDA api we look up the function address that contains the error message and add that to the list. The final output looks something like this:
 
