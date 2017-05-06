@@ -133,7 +133,7 @@ def findPrintfStrings(addr):
    if(disasm[0:4] == "addi" and GetOpnd(a, 0)[0:2] == '$a'):
      ret[GetOpnd(a, 0)] = disasm.split('#')[1].strip()
 
- # find he source code file
+ # find the source code file
  for a in range(addr - 30*4, addr, 4):
    disasm = GetDisasm(a)
    if(disasm[0:4] == "addi" and GetOpnd(a, 0) == '$a0' and disasm.split('#')[1][0:7] == ' "/home'):
