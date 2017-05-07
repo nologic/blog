@@ -47,7 +47,7 @@ Status Code:200 OK
 Remote Address:[IP REDACTED]:80
 ```
 
-So, potentially, `vshttpd` is some private web server implementation that has been resold by the same contractor to various device manufacturers. This is exciting because the findings we make will be applicable to a number of devices.
+So, potentially, `vshttpd` is some private web server implementation that has been resold by the same contractor to various device manufacturers. This is exciting because the findings we make will be applicable to a number of devices. I've masked the target IPs for their safety, but if you so wish to find them again just have a look at [Shodan](https://www.shodan.io/).
 
 ## Finding the binary
 
