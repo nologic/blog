@@ -240,27 +240,22 @@ Breakpoint 1, 0x00521bdc in ?? ()
 Before the call, the parameters look like this:
 
 ```
-(gdb) x/10wx $a0                                           <- strcpy dest
+(gdb) x/10wx $a0                                  <- strcpy dest
 0x5ad328: 0x00000000 0x00000000 0x00000000 0x00000000
 0x5ad338: 0x00000000 0x00000000 0x00000000 0x00000000
 0x5ad348: 0x00000000 0x00000000
-(gdb) x/10wx $a0+1000                                      <- end of dest
+(gdb) x/10wx $a0+1000                             <- end of dest
 0x5ad710: 0x00000000 0x00000000 0x00000000 0x00000000
 0x5ad720: 0x00000000 0x00000000 0x00000000 0x0051b660
 0x5ad730: 0x0051b810 0x0051b844 <- Saved return address
-```
-
-And, after the call, the values change:
-
-```
-(gdb) x/10wx $a1                                           <- strcpy src
+(gdb) x/10wx $a1                                  <- strcpy src
 0x5ad943: 0x41414141 0x41414141 0x41414141 0x41414141
 0x5ad953: 0x41414141 0x41414141 0x41414141 0x41414141
 0x5ad963: 0x41414141 0x41414141
-(gdb) x/10wx $a1+1000                                      <- end of src
+(gdb) x/10wx $a1+1000                             <- end of src
 0x5add2b: 0x41414141 0x41414141 0x41414141 0x41414141
 0x5add3b: 0x41414141 0x41414141 0x41414141 0x41414141
-0x5add4b: 0x41414141 0x42ff4242 <- Saved return address
+0x5add4b: 0x41414141 0x42ff4242
 ```
 
 The snippet above shows the destination and the source buffers. The source being controlled by the attacker, we see that the attacker is ready to supply a new pointer value. Now, let’s breakpoint just after the `strcpy` call.
@@ -282,7 +277,7 @@ The end of the original destination buffer now looks like this:
 0x5ad730: 0x41414141 0x42ff4242
 ```
 
-Notice that the addresses on the destination buffer match exactly and the the pointer at `0x5ad730 + 4` has a new value `0x42ff4242` which is clearly invalid. If we let the program run we see that the program will use this address to look for instructions to execute:
+Notice that the addresses on the destination buffer match exactly and the pointer at `0x5ad730 + 4` has a new value `0x42ff4242` which is clearly invalid. If we let the program run we see that the program will use this address to look for instructions to execute:
 
 ```
 Program received signal SIGBUS, Bus error.
@@ -291,7 +286,7 @@ Program received signal SIGBUS, Bus error.
 => 0x42ff4242: <error: Cannot access memory at address 0x42ff4240>
 ```
 
-Not good! The new pointer takes effect slightly further down the execution path from the strcpy overwrite:
+Not good! The new pointer takes effect slightly further down the execution path from the `strcpy` overwrite:
 
 ```
 .text:004136A4  addu    $v0, $v1, $v0         # Add Unsigned
@@ -302,18 +297,18 @@ Not good! The new pointer takes effect slightly further down the execution path 
 .text:004136B8  lw      $gp, 0x28+var_18($sp) # Load Word
 ```
 
-The purpose of the above function is unknown but this is where the attacker gains control of the execution. This vulnerability is very much exploitable. What we notice is that the heap is allocated a low addresses and its structure is not randomized. This means that the heap allocations are at predictable addresses and the way that the server is implemented makes the malloc allocations predictable. It is probably due to minimal implementation of the heap algorithms for the embedded system as well as the server's single threaded model. So, we were able to insert a static address into our exploit buffer. Then we can point the program counter to our shellcode and take control of the device!
+The purpose of the above function is unknown but this is where the attacker gains control of the execution. This vulnerability is very much exploitable. What we notice is that the heap is allocated at low addresses and its structure is not randomized. This means that the heap allocations are at predictable addresses and the way that the server is implemented makes the malloc allocations predictable. It is probably due to the minimal implementation of the heap algorithms for the embedded system as well as the server's single threaded model. So, we were able to insert a static address into our exploit buffer. Then we can point the program counter to our shellcode and take control of the device!
 
-Unlike the stack overflow vulnerability, this one requires a more complex HTTP request. This means that the attack vector gets a little more complicated. However, since the device listens to all interfaces we can exploit the router directly from, say, a WiFi router that it connects to.
+Unlike the stack overflow vulnerability, this one requires a more complex HTTP request. This means that the attack vector gets a little more complicated. However, since the device listens to all interfaces we can exploit the router directly from, say, a rogue WiFi router that it connects to.
 
 ## Fix
 The bug is trivial to fix. As a general rule `strcpy` is considered dangerous and should be avoided. Instead, use `strncpy` which accepts the size of the destination buffer as a parameter which would prevent such overwrites.
 
-As an additional measure of protection, the function pointers on the heap should be XORed with a execution specific random integer. This way an attacker would not be able to overwrite them with useful values thereby preventing exploitation attempts.
+As an additional measure of protection, the function pointers on the heap should be XORed with an execution specific random integer. This way an attacker would not be able to overwrite them with useful values thereby preventing exploitation attempts even in the presence of overflow conditions.
 
 
 # Reporting to the vendor
-Both vulnerabilities were reported to the Vendor on January 24, 2017 (stack overflow) and January 21, 2017 (heap overflow). The company quickly acknowledged their receipt and provided a new build with a patch on February 19, 2017. I found it interesting that HooToo has provided the update to me personally rather than making it generally available. Their download page was later updated on March 7, 2017. I would have expected them to take a higher priority for a much faster patch.
+The vulnerabilities were reported to the vendor on January 24, 2017 (stack overflow) and January 21, 2017 (heap overflow). The company quickly acknowledged their receipt and provided a new build with a patch on February 19, 2017. I found it interesting that HooToo has provided the update to me personally rather than making it generally available. Their download page was later updated on March 7, 2017. It is very important to take such vulnerabilities seriously and make patches generally available as quickly as possible.
 
 Upon examining the change log, I only saw this line:
 ```
@@ -325,9 +320,9 @@ There are many reasons why an attacker might want to exploit these devices. One 
 
 Other reasons for leveraging the vulnerabilities in the travel routers are a bit more indirect. One is to obfuscate attack sources and make attribution harder by creating a jump point [1]. Another is to use the router to infect other systems. A person using the travel router would likely be traveling a lot and touching many different networks from a position of some trust. These networks could include hotels, airbnb’s, private residences, cafes and enterprises. And so, having malware on the device would give an attacker a foothold inside another network.
 
-Both of the aforementioned discovered vulnerabilities on the device are web based and require the attacker to have direct access via an IP address. The easiest way is via a user connected to the WiFi created by the device. However, another way is to go from the outside network. That is because the webserver doesn’t just listen on the internal network, it listens on all interfaces. And so, if an AirBnB network has been compromised then an attacker could discover the router as the client on the WiFi and launch the attacks. There is already an example of malware for Android caught in the wild attacking host WiFi routers [3].
+Both of the aforementioned vulnerabilities are web based and require the attacker to have direct access via an IP address. The easiest way is via a user connected to the WiFi created by the device. However, another way is to go from the outside network. That is because the webserver doesn’t just listen on the internal network, it listens on all interfaces. And so, if an AirBnB network has been compromised then an attacker could discover the router as the client on the WiFi and launch attacks from there. There is already an example of malware for Android caught in the wild attacking host WiFi routers [3].
 
-The stack overflow vulnerability presents another interesting opportunity for the attacker because it doesn’t require the attacker to be on the network along side the device. It has been previously reported [4] that the device is vulnerable to Cross Site Request Forgery attacks. Since the overflow is in processing a GET request field, it means that the attacker just needs a user to open a page with a forged request to gain execution on the router. Now, that is an awesome attack vector!
+The stack overflow vulnerability presents another interesting opportunity for the attacker because it doesn’t require the attacker to be on the network along side the device. It has been previously reported [4] that the device is vulnerable to Cross Site Request Forgery attacks. Since the overflow is in processing of a GET request field, it means that the attacker just needs a user to open a page with a forged request to gain execution on the router. Now, that is an awesome attack vector!
 
 # References
 [1] [WAVE YOUR FALSE FLAGS! DECEPTION TACTICS MUDDYING ATTRIBUTION IN TARGETED ATTACKS.](https://securelist.com/files/2016/10/Bartholomew-GuerreroSaade-VB2016.pdf)
