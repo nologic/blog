@@ -138,7 +138,7 @@ Program received signal SIGSEGV, Segmentation fault.
 0x3e5126d0 in ?? ()
 ```
 
-The crash is occurring because the location we send the Program Counter to does not contain any valid instructions. After a non-exhaustive attempts at exploitation we found that the partial ASLR deployed on the device was enough to swart this particular vulnerability. There are two constraints to that we have to deal with:
+The crash is occurring because the location we send the Program Counter to does not contain any valid instructions. After non-exhaustive attempts at exploitation we found that the partial ASLR deployed on the device was enough to swart our attempts at exploiting this particular vulnerability. There are two constraints that we have to deal with:
 
 1. Due to use of `sprintf`, we cannot have NULLs in the buffer. Not an uncommon constraint.
 1. Due to the use of the format string `"</%s>"`, the last character of the buffer must be a _greater than_ sign.
