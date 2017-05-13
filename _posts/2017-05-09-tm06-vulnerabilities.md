@@ -8,23 +8,23 @@ hidden: true
 In the course of reverse engineering the HooToo TM-06 Travel router, there were two interesting vulnerabilities discovered. Both are in the IOOS (vshttpd) web service. This is not shocking because the web service appears to be a custom implementation specific to the device. That's not to say the developers weren't good, rather it is that custom code tends to be the one that receives the least scrutiny. One vulnerability is a stack overflow. Another, a heap overflow. In this article we'll see how to fully exploit the heap buffer overflow vulnerability.
 
 # TL;DR
-There is partial ASLR implemented on the device: The dynamic libraries and the stack move around. So far as I could tell, there were no other significant protections. Both the heap and the stack are writable and executable.
+There is a partial ASLR implemented on the device: the dynamic libraries and the stack move around. So far as I could tell, there were no other significant protections. Both the heap and the stack are writable and executable.
 
-We found two buffer overflows. One is stack based (sprintf), which allows us to overwrite the return address on the executable stack. We were not able to exploit that vulnerability because it requires on information leak. However, it comes with a great attack vector via an XSRF. The other vulnerability is a heap overflow (strcpy) where we are able to overwrite a function pointer on the heap. We then leverage the fact that the heap is predictable and does not move around to build a full exploit with arbitrary binary code execution. Finally, We make proposals on how to fix these vulnerabilities.
+We found two buffer overflows. One is stack based (sprintf), which allows us to overwrite the return address on the executable stack. We were not able to exploit that vulnerability because it requires an information leak. However, it comes with a great attack vector via an XSRF. The other vulnerability is a heap overflow (strcpy) where we are able to overwrite a function pointer on the heap. We then leverage the fact that the heap is predictable, and does not move around, to build a full exploit with arbitrary binary code execution. Finally, we look at proposals on how to fix these vulnerabilities.
 
 # Stack overflow
-The HooToo HT-TM06 webserver suffers from a potentially exploitable stack overflow. We say potentially because the memory corruption mitigations, as enforced by the OS, prevent full exploitation. However, given that, historically, claims of non-exploitability have had the tendency of being wrong, I prefer to make it a soft claim. The webserver executes as a privileged process on the router, so an attacker could again privileged code execution via this vulnerability. In addition to running as a `root` user on the device the process listens to both internal and external interfaces.
+The HooToo HT-TM06 webserver suffers from a potentially exploitable stack overflow. We say potentially because the memory corruption mitigations, as enforced by the OS, prevent full exploitation. However, given that, historically, claims of non-exploitability have had the tendency of being wrong, I prefer to make it a soft claim. The webserver executes as a privileged process on the router, so an attacker could gain privileged code execution via this vulnerability. In addition to running as a `root` user on the device the process listens to both internal and external interfaces.
 
 ## Technical Details:
 *Affected versions:* HT-TM06 Firmware 2.000.030
 
-This write up focuses on firmware 2.000.030 because at the time of writing it was the latest version. However, due to the implementation style observed - abundance of `sprintf`s and other dangerous functions, it is believed that earlier versions will also be vulnerable as well. 
+This write up focuses on firmware 2.000.030 because at the time of analysis it was the latest version. However, due to the implementation style observed - abundance of `sprintf`s and other dangerous functions, it is believed that earlier versions will also be vulnerable as well. 
 
 *Binary:* /usr/sbin/ioos
 
-`ioos` is webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, it responds to requests behind a lighthttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
+`ioos` is a webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, it responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
 
-Upon closer analysis it was discovered that the ioos webserver has a stack overflow memory corruption vulnerability which can be triggered by an unauthenticated attacker. Most requests require an authentication token in the cookie to process, but these parameters are processed before those checks are completed.
+Upon closer analysis it was discovered that the ioos webserver has a stack overflow memory corruption vulnerability which can be triggered by an unauthenticated attacker. Most requests require an authentication token in the cookie to process, but the parameters abused by this vulnerability are processed before those checks are completed.
 
 The trigger HTTP request looks as follows:
 
@@ -181,7 +181,7 @@ This write up focuses on firmware 2.000.030 because at the time of writing it wa
 
 *Binary:* /usr/sbin/ioos
 
-`ioos` is webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, it responds to requests behind a lighthttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
+`ioos` is webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, it responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
 
 Upon closer analysis it was discovered that the ioos webserver has a heap overflow memory corruption vulnerability which can be triggered by an unauthenticated attacker.
 
@@ -309,7 +309,7 @@ As an additional measure of protection, the function pointers on the heap should
 # Reporting to the vendor
 Both vulnerabilities were reported to the Vendor on January 24, 2017 (stack overflow) and January 21, 2017 (heap overflow). The company quickly acknowledged their receipt and provided a new build with a patch on February 19, 2017. I found it interesting that HooToo has provided the update to me personally rather than making it generally available. Their download page was later updated on March 7, 2017. I would have expected them to take a higher priority for a much faster patch.
 
-Upon examining the change log I only saw this line:
+Upon examining the change log, I only saw this line:
 ```
 fix the bug caused by fname protocol
 ```
