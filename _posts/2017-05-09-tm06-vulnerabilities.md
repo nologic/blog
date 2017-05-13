@@ -173,16 +173,16 @@ Alternatively, one can also enable the use of stack canaries and recompile the o
 
 
 # Heap overflow
-The HooToo HT-TM06 webserver suffers from a potentially exploitable heap overflow. The webserver executes as a privileged process on the router, so an attacker could again privileged code execution via this vulnerability.
+The HooToo HT-TM06 webserver suffers from an exploitable heap overflow vulnerability. The webserver executes as a privileged process on the router, so an attacker could again privileged code execution via this vulnerability.
 
 ## Technical Details:
 *Affected versions:* HT-TM06 Firmware 2.000.030
 
-This write up focuses on firmware 2.000.030 because at the time of writing it was the latest version. However, due to the implementation style observed, it is believed that earlier versions will also be vulnerable. 
+This write up focuses on firmware 2.000.030 because at the time of analysis it was the latest version. However, due to the implementation style observed, it is believed that earlier versions will also be vulnerable. 
 
 *Binary:* /usr/sbin/ioos
 
-`ioos` is webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, it responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
+`ioos` is the webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, the server responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
 
 Upon closer analysis it was discovered that the ioos webserver has a heap overflow memory corruption vulnerability which can be triggered by an unauthenticated attacker.
 
@@ -217,12 +217,12 @@ Notice that the cookie header contains a very long string - longer than 1024 byt
 .text:00521BEC  lw      $gp, 0x40+var_28($sp)  # Load Word
 ```
 
-The above code shows the call to strcpy which copies the user supplied data to an internal `cgi_tab` data structure. The data structure is allocated on the heap with the string buffer, at most, 1028 bytes long. After the string buffer other data follows, specifically function pointers which is a common pattern with data structures used in ioos.
+The above code shows the call to strcpy which copies the user supplied data to an internal `cgi_tab` data structure. The data structure is allocated on the heap with the string buffer, at most, 1028 bytes long. After the string buffer other data follows, specifically function pointers. This is a common pattern with data structures used in ioos.
 
-The strcpy call is unbounded and so the unauthenticated user can supply any sized string to be copied into a fixed destination buffer.
+The `strcpy` call is unbounded and so the unauthenticated user can supply any sized string to be copied into a fixed destination buffer.
 
 ## Exploitation
-Why is this issue so serious? Because it gives an authenticated attacker control of the Program Counter. How? By allowing the attacker to change the function pointers following a string buffer on the heap. Doing so the attacker can change program flow and potentially execute malware.
+Why is this issue so serious? Because it gives an unauthenticated attacker control of the Program Counter. How? By allowing the attacker to change the function pointers following a string buffer on the heap. Doing so the attacker can change program flow and potentially execute malware.
 
 As previously mentioned the strcpy will write past the destination buffer end. Let’s see what happens under the microscope. We will set a breakpoint before and after the offending strcpy call.
 
@@ -248,6 +248,11 @@ Before the call, the parameters look like this:
 0x5ad710: 0x00000000 0x00000000 0x00000000 0x00000000
 0x5ad720: 0x00000000 0x00000000 0x00000000 0x0051b660
 0x5ad730: 0x0051b810 0x0051b844 <- Saved return address
+```
+
+And, after the call, the values change:
+
+```
 (gdb) x/10wx $a1                                           <- strcpy src
 0x5ad943: 0x41414141 0x41414141 0x41414141 0x41414141
 0x5ad953: 0x41414141 0x41414141 0x41414141 0x41414141
