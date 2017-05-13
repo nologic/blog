@@ -140,18 +140,18 @@ Program received signal SIGSEGV, Segmentation fault.
 
 The crash is occurring because the location we send the Program Counter to does not contain any valid instructions. After non-exhaustive attempts at exploitation we found that the partial ASLR deployed on the device was enough to swart our attempts at exploiting this particular vulnerability. There are two constraints that we have to deal with:
 
-1. Due to use of `sprintf`, we cannot have NULLs in the buffer. Not an uncommon constraint.
+1. Due to the use of the `sprintf` function, we cannot have NULLs in the buffer. Not an uncommon constraint.
 1. Due to the use of the format string `"</%s>"`, the last character of the buffer must be a _greater than_ sign.
 
 The following scenarios were considered:
 
 - Point the return address to some location is the main binary that would then jump to a buffer on the stack. The stack is executable (great!), however the program is located at a low address that starts with a zero. Due to the ending character in the format string, we cannot manage a zero character even though the architecture is little endian. Normally we'd be able to leverage the NULL that `sprintf` automatically places at the end of the C-String.
 
-- Point the return address to some location in the heap. The heap is executable (great!). We are able to get a buffer into the heap (great!). The heap is location just above the main binary which has locations that start with a zero.
+- Point the return address to some location in the heap. The heap is executable (great!). We are able to get a buffer into the heap (great!). The heap is at a location just above the main binary which has locations that start with a zero.
 
-- Point the return address to some useful library instruction. We realize that the libraries actually move around between executions.
+- Point the return address to some useful library instruction. I realize that the libraries actually move around between executions due to memory randomization.
 
-- Point the return address directly to our buffer to the stack. The stack is located in high memory and moves around along with the libraries.
+- Point the return address directly to our buffer on the stack. The stack is located in high memory and moves around along with the libraries.
 
 ```
 # sysctl -A | grep kernel.randomize_va_space 2>/dev/null
@@ -160,7 +160,7 @@ kernel.randomize_va_space = 1
 
 So, in order to exploit this we need to find a memory leak to get one of the last two scenarios to work. This is really unfortunate, we got thwarted by memory randomization and constraints on the format string. 
 
-Nonetheless, this vulnerability is particular dangerous because, as you can see, it gets us really close to full exploitation. Also, if it works then it can be exploited without authentication and launched from the user's web browser via a cross site request forgery attack. That is because the attack strings could be sent via a pure GET request. Such request can be embedded in some innocent looking page, an `iframe` or via an XSS attack of some unrelated website. In essence we would be able to exploit a user's router through their browser - it is a great attack vector!
+Nonetheless, this vulnerability is particularly dangerous because, as you can see, it gets us really close to full exploitation. Also, if it works then it can be exploited without authentication and launched from the user's web browser via a cross site request forgery attack. That is because the attack strings could be sent via a pure GET request. Such request can be embedded in some innocent looking page, an `iframe` or via an XSS attack of some unrelated website. In essence we would be able to exploit a user's router through their browser - what a great attack vector!
 
 ## The Fix
 The bug is trivial to fix. First option is to use snprintf such as this:
