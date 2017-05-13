@@ -58,7 +58,7 @@ Date: Tue, 24 Jan 2017 15:46:16 GMT
 <?xml version="1.0" ?><root><[long string]><waninfo><errno>0</errno></waninfo></[long string]></root>
 ```
 
-So, it becomes clear that the `fname` parameter is used to construct the XML response string. Looking at the disassembly we can see that the parameter value is used in the `xml_add_elem function`. This function appends a formatted string value to the response message string.
+So, it becomes clear that the `fname` parameter is used to construct the XML response string. Looking at the disassembly we can see that the parameter value is used in the `xml_add_elem` function. This function appends a formatted string value to the response message string.
 
 ```
 xml_add_elem:
@@ -68,6 +68,7 @@ xml_add_elem:
 .text:00512690 00 00 00 00    nop
 .text:00512694 E8 7A A5 24    addiu   $a1, (aS_19 - 0x540000)  # "</%s>"
 .text:00512698 3C 02 A6 8F    lw      $a2, 0x238+element_name($sp)  # Load Word
+
 .text:0051269C E0 87 99 8F    la      $t9, sprintf     # Load Address
 .text:005126A0 00 00 00 00    nop
 .text:005126A4 09 F8 20 03    jalr    $t9 ; sprintf    # Jump And Link Register
@@ -77,7 +78,7 @@ xml_add_elem:
 In the disassembly above we can see that the destination string is a stack based buffer: `$sp + (0x238+var_110)`. Since *sprintf* is used instead of *snprintf*, there is nothing to prevent the function from writing past the buffer boundary.
 
 ## Exploitation
-Why is this issue so serious? Because it gives an unauthenticated attacker can gain control of the Program Counter. How? By allowing the attacker to change the function return address that is stored on the program stack and used to direct execution at the end of the function execution.
+Why is this issue so serious? Because it gives an unauthenticated attacker the ability to control the Program Counter. How? By allowing the attacker to change the function return address that is stored on the program stack which used to direct execution at the end of the function execution.
 
 As mentioned above the sprintf allows the attacker to write past the buffer boundary. On the stack, the buffer occupies 256 bytes:
 
@@ -103,7 +104,7 @@ As mentioned above the sprintf allows the attacker to write past the buffer boun
 0x7f8e2078: 0x00595ea8 0x00000001 0x0043bb04 0x0043b8d0
 ```
 
-The destination buffer is at `0x7f8e2078 - 0x7f8e1f78 = 0x100 (256)` as shown above. After the buffer, there are 8 bytes of local variables followed by the saved return address (`$ra` register) used by the function before it returns. We can see the current value is `0x0043bb04` at location `0x7f8e2078 + 8`.
+The destination buffer stops at `0x7f8e2078` and begins at `0x7f8e1f78` which the difference being `0x100 (256)` as shown above. After the buffer, there are 8 bytes of local variables. The variables are followed by the saved return address (`$ra` register). This return address is used by the function before it returns. We can see the current value is `0x0043bb04` at location `0x7f8e2078 + 8`.
 
 
 After the sprintf call at location `.text:005126A4`, the same location on the stack looks like this:
