@@ -8,7 +8,9 @@ hidden: true
 In the course of reverse engineering the HooToo TM-06 Travel router, there were two interesting vulnerabilities discovered. Both are in the IOOS (vshttpd) web service. This is not shocking because the web service appears to be a custom implementation specific to the device. That's not to say the developers weren't good, rather it is that custom code tends to be the one that receives the least scrutiny. One vulnerability is a stack overflow. Another, a heap overflow. In this article we'll see how to fully exploit the heap buffer overflow vulnerability.
 
 # TL;DR
-There is partial ASLR implemented on the device: The dynamic libraries and the stack move around. We found two buffer overflows. One is stack based (sprintf), which allows us to overwrite the return address on the executable stack. We were not able to exploit that vulnerability because it requires on information leak. However, it comes with a great attack vector via an XSRF. The other vulnerability is a heap overflow (strcpy) where we are able to overwrite a function pointer on the heap and leverage the fact that the heap is predictable and does not move around to build a full exploit with arbitrary binary code execution. We also make proposals on how to fix these vulnerabilities.
+There is partial ASLR implemented on the device: The dynamic libraries and the stack move around. So far as I could tell, there were no other significant protections. Both the heap and the stack are writable and executable.
+
+We found two buffer overflows. One is stack based (sprintf), which allows us to overwrite the return address on the executable stack. We were not able to exploit that vulnerability because it requires on information leak. However, it comes with a great attack vector via an XSRF. The other vulnerability is a heap overflow (strcpy) where we are able to overwrite a function pointer on the heap. We then leverage the fact that the heap is predictable and does not move around to build a full exploit with arbitrary binary code execution. Finally, We make proposals on how to fix these vulnerabilities.
 
 # Stack overflow
 The HooToo HT-TM06 webserver suffers from a potentially exploitable stack overflow. We say potentially because the memory corruption mitigations, as enforced by the OS, prevent full exploitation. However, given that, historically, claims of non-exploitability have had the tendency of being wrong, I prefer to make it a soft claim. The webserver executes as a privileged process on the router, so an attacker could again privileged code execution via this vulnerability. In addition to running as a `root` user on the device the process listens to both internal and external interfaces.
@@ -162,12 +164,11 @@ Nonetheless, this vulnerability is particular dangerous because, as you can see,
 ## The Fix
 The bug is trivial to fix. First option is to use snprintf such as this:
 
+```c
 snprintf($sp+0x128, 256, “<%s>”, fname);
+```
 
 Alternatively, one can also enable the use of stack canaries and recompile the original code. The program will still be remotely crashable, depending on hose exceptions are handled, but it should prevent the attacker from controlling the program counter.
-
-## Reporting to the vendor
-
 
 
 # Heap overflow
@@ -303,6 +304,15 @@ Unlike the stack overflow vulnerability, this one requires a more complex HTTP r
 The bug is trivial to fix. As a general rule `strcpy` is considered dangerous and should be avoided. Instead, use `strncpy` which accepts the size of the destination buffer as a parameter which would prevent such overwrites.
 
 As an additional measure of protection, the function pointers on the heap should be XORed with a execution specific random integer. This way an attacker would not be able to overwrite them with useful values thereby preventing exploitation attempts.
+
+
+# Reporting to the vendor
+Both vulnerabilities were reported to the Vendor on January 24, 2017 (stack overflow) and January 21, 2017 (heap overflow). The company quickly acknowledged their receipt and provided a new build with a patch on February 19, 2017. I found it interesting that HooToo has provided the update to me personally rather than making it generally available. Their download page was later updated on March 7, 2017. I would have expected them to take a higher priority for a much faster patch.
+
+Upon examining the change log I only saw this line:
+```
+fix the bug caused by fname protocol
+```
 
 # Conclusion
 There are many reasons why an attacker might want to exploit these devices. One obvious reason is to gain access to the user’s information or manipulate user activity. Having malware on the router means that the attacker could potentially see unencrypted traffic, modify their DNS lookups to enable man-in-the-middle attacks or inject malicious content into traffic. For example, have the ability to inject iframes for browser exploitation or catch vulnerable update mechanisms [2].
