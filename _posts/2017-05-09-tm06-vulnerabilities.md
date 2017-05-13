@@ -163,13 +163,13 @@ So, in order to exploit this we need to find a memory leak to get one of the las
 Nonetheless, this vulnerability is particularly dangerous because, as you can see, it gets us really close to full exploitation. Also, if it works then it can be exploited without authentication and launched from the user's web browser via a cross site request forgery attack. That is because the attack strings could be sent via a pure GET request. Such request can be embedded in some innocent looking page, an `iframe` or via an XSS attack of some unrelated website. In essence we would be able to exploit a user's router through their browser - what a great attack vector!
 
 ## The Fix
-The bug is trivial to fix. First option is to use snprintf such as this:
+The bug is trivial to fix. First option is to just use `snprintf` instead of `sprintf`:
 
 ```c
 snprintf($sp+0x128, 256, “<%s>”, fname);
 ```
 
-Alternatively, one can also enable the use of stack canaries and recompile the original code. The program will still be remotely crashable, depending on hose exceptions are handled, but it should prevent the attacker from controlling the program counter.
+Alternatively, one can also enable the use of stack canaries and recompile the original code. The program will still be remotely crashable, depending on how exceptions are handled, but it should prevent the attacker from directly controlling the program counter.
 
 
 # Heap overflow
