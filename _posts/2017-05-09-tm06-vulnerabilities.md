@@ -12,6 +12,9 @@ There is a partial ASLR implemented on the device: the dynamic libraries and the
 
 We found two buffer overflows. One is stack based (sprintf), which allows us to overwrite the return address on the executable stack. We were not able to exploit that vulnerability because it requires an information leak. However, it comes with a great attack vector via an XSRF. The other vulnerability is a heap overflow (strcpy) where we are able to overwrite a function pointer on the heap. We then leverage the fact that the heap is predictable, and does not move around, to build a full exploit with arbitrary binary code execution. Finally, we look at proposals on how to fix these vulnerabilities.
 
+# Background
+In this article we walk through vulnerabilities found in the webserver component of the HooToo Travel Mate 6 router. For background knowledge on the product and the various subcomponents please see the previous posts on [Protecting the digital nomad](debugtrap.com/2017/03/19/travel-safe/) (Part 1) and [Reverse Engineering of an Embedded Webserver](http://debugtrap.com/2017/04/10/embedded-webserver/) (Part 2).
+
 # Stack overflow
 The HooToo HT-TM06 webserver suffers from a potentially exploitable stack overflow. We say potentially because the memory corruption mitigations, as enforced by the OS, prevent full exploitation. However, given that, historically, claims of non-exploitability have had the tendency of being wrong, I prefer to make it a soft claim. The webserver executes as a privileged process on the router, so an attacker could gain privileged code execution via this vulnerability. In addition to running as a `root` user on the device the process listens to both internal and external interfaces.
 
