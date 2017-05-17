@@ -25,7 +25,7 @@ This write up focuses on firmware 2.000.030 because at the time of analysis it w
 
 *Binary:* /usr/sbin/ioos
 
-`ioos` is a webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, it responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
+`ioos` is a webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttpd` on HTTP responses, it responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
 
 Upon closer analysis it was discovered that the ioos webserver has a stack overflow memory corruption vulnerability which can be triggered by an unauthenticated attacker. Most requests require an authentication token in the cookie to process, but the parameters abused by this vulnerability are processed before those checks are completed.
 
@@ -185,7 +185,7 @@ This write up focuses on firmware 2.000.030 because at the time of analysis it w
 
 *Binary:* /usr/sbin/ioos
 
-`ioos` is the webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttd` on HTTP responses, the server responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
+`ioos` is the webserver responsible for handling the CGI content of the HT-TM06 web interface. Labeling itself `vshttpd` on HTTP responses, the server responds to requests behind a lighttpd proxy. The function of ioos is to coordinate user sessions, authenticate users and reconfigure the system upon request. The webserver is configured to respond to `*.csp` requests such as `GET /protocol.csp`.
 
 Upon closer analysis it was discovered that the ioos webserver has a heap overflow memory corruption vulnerability which can be triggered by an unauthenticated attacker.
 
