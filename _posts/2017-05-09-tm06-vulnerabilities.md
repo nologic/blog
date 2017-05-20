@@ -19,6 +19,7 @@ In this article we walk through vulnerabilities found in the webserver component
 The HooToo HT-TM06 webserver suffers from a potentially exploitable stack overflow. We say potentially because the memory corruption mitigations, as enforced by the OS, prevent full exploitation. However, given that, historically, claims of non-exploitability have had the tendency of being wrong, I prefer to make it a soft claim. The webserver executes as a privileged process on the router, so an attacker could gain privileged code execution via this vulnerability. In addition to running as a `root` user on the device the process listens to both internal and external interfaces.
 
 ## Technical Details:
+*CVE ID:* [CVE-2017-9026](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-9026)
 *Affected versions:* HT-TM06 Firmware 2.000.030
 
 This write up focuses on firmware 2.000.030 because at the time of analysis it was the latest version. However, due to the implementation style observed - abundance of `sprintf`s and other dangerous functions, it is believed that earlier versions will also be vulnerable as well. 
@@ -179,6 +180,7 @@ Alternatively, one can also enable the use of stack canaries and recompile the o
 The HooToo HT-TM06 webserver suffers from an exploitable heap overflow vulnerability. The webserver executes as a privileged process on the router, so an attacker could again privileged code execution via this vulnerability.
 
 ## Technical Details:
+*CVE ID:* [CVE-2017-9025](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-9025)
 *Affected versions:* HT-TM06 Firmware 2.000.030
 
 This write up focuses on firmware 2.000.030 because at the time of analysis it was the latest version. However, due to the implementation style observed, it is believed that earlier versions will also be vulnerable. 
