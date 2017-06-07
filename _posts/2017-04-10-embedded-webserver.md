@@ -324,6 +324,41 @@ I find this phenomenon quite often. There will be an instruction that stores a v
 
 Finally, a bunch of NOPs around branching. The compiler is being safe about the two stage pipeline to make sure that when the registers are used they are in fact fully actualized.
 
+# Session check
+For commands triggered by the user via web UI the server will perform a session validation. This happens at the beginning of each function. For example, there's a feature for cloning a MAC address. Before the feature is executed a call to `cgi_chk_sys_login` will be made.
+
+```asm
+.text:0048E4E0             set_macCloneEnabled:                     # DATA XREF: .data:0058DD10o
+.text:0048E4E0   li      $gp, 0x1087B0    # Load Immediate
+.text:0048E4E8   addu    $gp, $t9         # Add Unsigned
+...
+.text:0048E554   move    $a1, $v0
+.text:0048E558   la      $t9, cgi_chk_sys_login  # Load Address
+.text:0048E55C   nop
+.text:0048E560   jalr    $t9 ; cgi_chk_sys_login  # <---- session check
+.text:0048E564   nop
+.text:0048E568   lw      $gp, 0x58+var_48($sp)  # Load Word
+.text:0048E56C   bnez    $v0, loc_48E588  # Branch on Not Zero
+.text:0048E570   nop
+.text:0048E574   li      $v0, 0x132B3A2   # Load Immediate
+.text:0048E57C   sw      $v0, 0x58+var_C($sp)  # Store Word
+.text:0048E580   b       loc_48E83C       # Branch Always
+.text:0048E584   nop
+```
+
+The session check essentially ensures that the token in the cookie matches one that is recorded locally. This is a fairly common practice. It is a little bit concerning that the check is so decentralized, however the server is small in feature and so it should be relatively easy to ensure that every sensitive function performs this authorization check.
+
+```
+Python>for i in XrefsTo(0x00437550): print hex(i.frm) + ": " + GetDisasm(i.frm)
+0x43a7ecL: jalr    $t9 ; cgi_chk_sys_login # Jump And Link Register
+0x43bdb4L: jalr    $t9 ; cgi_chk_sys_login # Jump And Link Register
+0x43bfecL: jalr    $t9 ; cgi_chk_sys_login # Jump And Link Register
+0x43c560L: jalr    $t9 ; cgi_chk_sys_login # Jump And Link Register
+...
+```
+
+A total of 315 references to the check. This is a good way to find out which functions are protected and somehow exposed to authenticated users.
+
 # Conclusion
 We went through some interesting patterns for the implementation of the server. Hopefully, it has given you enough of an intuition for your own reverse engineering efforts in the future. We got really lucky in this case because the compiler was not aggressively optimizing the code and so we got to see a lot of patterns that make reversing of this server much easier.
 

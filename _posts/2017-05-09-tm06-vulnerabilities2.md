@@ -1,8 +1,8 @@
 ---
 layout: post
 title: HooToo Travel Mate 6 vulnerabilities.
-draft: true
-hidden: true
+draft: false
+hidden: false
 ---
 
 In the course of reverse engineering the HooToo TM-06 Travel router, there were two interesting vulnerabilities discovered. Both are in the IOOS (vshttpd) web service. This is not shocking because the web service appears to be a custom implementation specific to the device. That's not to say the developers weren't good, rather it is that custom code tends to be the one that receives the least scrutiny. One vulnerability is a stack overflow. Another, a heap overflow. In this article we'll see how to fully exploit the heap buffer overflow vulnerability.
