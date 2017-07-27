@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Protecting the digital nomad
+title: Part 1: Protecting the digital nomad
 draft: true
 hidden: true
 ---

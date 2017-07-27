@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Reverse Engineering of an Embedded Webserver
+title: Part 2: Reverse Engineering of an Embedded Webserver
 draft: true
 hidden: true
 ---
@@ -357,7 +357,7 @@ Python>for i in XrefsTo(0x00437550): print hex(i.frm) + ": " + GetDisasm(i.frm)
 ...
 ```
 
-A total of 315 references to the check. This is a good way to find out which functions are protected and somehow exposed to authenticated users.
+A total of 315 references to the check. This is a good way to find out which functions are protected and somehow exposed to authenticated users. It is also good way to identify which function do something sensitive.
 
 # Conclusion
 We went through some interesting patterns for the implementation of the server. Hopefully, it has given you enough of an intuition for your own reverse engineering efforts in the future. We got really lucky in this case because the compiler was not aggressively optimizing the code and so we got to see a lot of patterns that make reversing of this server much easier.

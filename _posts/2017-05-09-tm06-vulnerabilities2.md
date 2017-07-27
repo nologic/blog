@@ -1,6 +1,6 @@
 ---
 layout: post
-title: HooToo Travel Mate 6 vulnerabilities.
+title: Part 3: HooToo Travel Mate 6 vulnerabilities.
 draft: true
 hidden: true
 ---
