@@ -6,7 +6,7 @@ tags: about
 
 ![](../../../../images/self_zeronight.jpg "Mikhail Sosonkin at ZeroNights 2016")
 
-I am a Director of Research and Data at SYNACK Inc. In this role I work on a wide range of topics from security research to data science and everything in between. I am passionate about finding vulnerabilities, improving security, creating quality systems and, most of all, discovery. Giving presentations and teaching brings me joy. 
+I am passionate about finding vulnerabilities, improving security, creating quality systems and, most of all, discovery. Giving presentations and teaching brings me joy. 
 
 My broad experience covers low-level assembly reverse engineering, exploitation, big data cloud development and high-order analytics. I can work comfortably at just about any technical level. In addition to my technical experiences, I have also worked in team leadership and international business liaison roles. 
 
