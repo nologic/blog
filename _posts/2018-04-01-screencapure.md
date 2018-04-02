@@ -3,7 +3,7 @@ layout: post
 title: Who moved my pixels?!
 ---
 
-Screen captures are super useful in my workflow and OS X makes it easy with just a few key combinations. However, I was really curious (worried) if someone could take a screen shot without my knowledge. So, I decided to figure out how that mechanism works and if there was a way build malware to covertly steal these pixels. 
+Screen captures are super useful in my workflow and OS X makes it easy with just a few key combinations. However, I was really curious (worried) if someone could take a screen shot without my knowledge. So, I decided to figure out how that mechanism works and see if there was a way build malware to covertly steal these pixels. 
 
 ## Conclusion
 Reversed the screencapture utility to find out how it uses the standard framework functions. Then traced the mechanism to the `WindowServer` and wrote a utility to covertly grab screens; `sandbox-exec` can't stop the screen gabs. Used `frida` to detect someone grabbing the screen pixels covertly. There is  malware, from 2013(!), that steals people's pixels: [macs.app](https://www.virustotal.com/en/file/6acd92d0dfe3e298d73b78a3dcc6d52ff4f85a70a9f2d0dcfe7ae4af2dd685cc/analysis/) [5]. As expected, there are multiple way to get the screenshots. This was known since, at least, [2011](https://twitter.com/patrickwardle/status/962803166323531777)!
