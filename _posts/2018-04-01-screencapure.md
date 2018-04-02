@@ -37,7 +37,7 @@ __text:10000287E  call    _getopt
 __text:100002883  lea     ecx, [rax-42h]
 ```
 
-To be user friendly, the utility uses a shutter sound to indicate that a the screen has been captured. So, I turned up my speakers and started debugging! The sound would serve as guiding light to help narrow down the useful code.
+To be user friendly, the utility uses a shutter sound to indicate that the screen has been captured. So, I turned up my speakers and started debugging! The sound would serve as guiding light to help narrow down the useful code.
 
 ```asm
 __text:100002E67  jz      loc_100003130
