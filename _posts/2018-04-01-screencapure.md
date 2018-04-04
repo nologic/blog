@@ -45,7 +45,7 @@ __text:100002E6D  call    take_the_screenshot
 __text:100002E72  jmp     loc_10000337B
 ```
 
-Unfortunately, the sound is played very early in the process. At least, when I hear the sound, know I'm on the right path.
+Unfortunately, the sound is played very early in the process. At least, when I hear the sound, I know I'm on the right path.
 
 ```
 __text:100003D20 take_the_screenshot proc near
@@ -504,7 +504,7 @@ As far as I could tell, pretty much any user and any process that has access (wh
     (global-name "com.apple.windowserver.active"))
 ```
 
-I'm not really an OS X expert, but I read some [blogs](https://reverse.put.as/wp-content/uploads/2011/09/Apple-Sandbox-Guide-v1.0.pdf) [2]. There I found that [OSXReverse](https://twitter.com/osxreverser) has developed a manual on how to configure the sandbox. The closest thing I could find was to prevent the process from looking up the WindowServer port via its name. However, this is not a practical mechanism because lots of applications will want to access the GUI and, more important, port numbers aren't that hard to bruteforce!
+I'm not really an OS X expert, but I read some [blogs](https://reverse.put.as/wp-content/uploads/2011/09/Apple-Sandbox-Guide-v1.0.pdf) [2]. There I found that [OSXReverser](https://twitter.com/osxreverser) has developed a manual on how to configure the sandbox. The closest thing I could find was to prevent the process from looking up the WindowServer port via its name. However, this is not a practical mechanism because lots of applications will want to access the GUI and, more important, port numbers aren't that hard to bruteforce!
 
 Instead, I really wish there was a mechanism to block mach messages with a specific message ID. For example, something like this:
 
